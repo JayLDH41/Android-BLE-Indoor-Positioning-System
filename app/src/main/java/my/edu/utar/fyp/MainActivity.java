@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
         }, delay);
     }
 
-    //list adapter for displaying ble devices
+    //list adapter for displaying ble devices on list view
     public static class DeviceListAdapter extends BaseAdapter {
         private Context context;
         private ArrayList<BluetoothDevice> devices;
@@ -261,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    //start scanning for signals
+    //start scanning for signals - only get the RSSI from the 3 beacons
     public void startScan() {
         Log.i("BLE Scanner: ", "Start scanning");
 
