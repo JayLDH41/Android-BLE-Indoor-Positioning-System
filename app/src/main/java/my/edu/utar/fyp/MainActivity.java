@@ -263,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
 
     //start scanning for signals - only get the RSSI from the 3 beacons
     public void startScan() {
-        Log.i("BLE Scanner: ", "Start scanning");
+        Log.i("startScan()", "Start scanning for BLE signals");
 
         List<ScanFilter> filters = null;
         filters = new ArrayList<>();
