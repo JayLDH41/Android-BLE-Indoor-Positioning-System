@@ -15,6 +15,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -125,45 +126,71 @@ public class MainActivity extends AppCompatActivity {
             @SuppressLint("MissingPermission") String deviceName = device.getName();
 
             if (deviceName != null) {
-                Log.i("Adding device to list adapter & hashmap: ", "Device name: " + deviceName + " " + "Device RSSI: " + rssi);
+                Log.i("leScanCallback", " Adding device to list adapter & hashmap: Device name: " + deviceName + " " + "Device RSSI: " + rssi);
                 adapter.addDevice(device, rssi);
                 adapter.notifyDataSetChanged();
                 hm.put(deviceName, rssi);
                 for (Map.Entry<String,Integer> entry : hm.entrySet())
-                    Log.i("HashMap result after onScanResult(): ", "Key: " + entry.getKey() + " Value: " + entry.getValue());
+                    Log.i("leScanCallback", " HashMap result after onScanResult(): Key: " + entry.getKey() + " Value: " + entry.getValue());
             }
         }
     };
 
+    int rssi1 = 0, rssi2 = 0, rssi3 = 0;
+    int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
+
     //method to store RSSI values into database
+    //each point 20 seconds - 2 second interval = 10 RSS values -> stores average RSS as offline RSSIs
     public void storeRSSI() {
-        Log.i("storeRefPoint(): ", "storing RSSI values into database");
+        Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + "logging", Toast.LENGTH_SHORT);
+        toast1.show();
+        Log.i("storeRSSI(): ", "running");
+        Log.i("storeRSSI(): ", "Logging Point " + rowCounter);
 
         if(rowCounter == 25) {
             Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
+            Log.i("storeRSSI()", "All points logged");
             toast.show();
             return;
         }
-        int rssi1, rssi2, rssi3;
 
-        rssi1 = hm.getOrDefault("Beacon1", 0);
-        rssi2 = hm.getOrDefault("Beacon2", 0);
-        rssi3 = hm.getOrDefault("Beacon3", 0);
+        final int delay = 2000;
+        final Handler eventHandler = new Handler();
 
-        Log.i("RSSI values: ", "Beacon1: " + rssi1 + " Beacon2: " + rssi2 + " Beacon3: " + rssi3);
+        eventHandler.postDelayed(new Runnable() {
+            int count = 0;
+            @Override
+            public void run() {
+                rssi1 += hm.getOrDefault("Beacon1", 0);
+                rssi2 += hm.getOrDefault("Beacon2", 0);
+                rssi3 += hm.getOrDefault("Beacon3", 0);
+                Log.i("storeRSSI():",  "RSSI Logged " + count + " Values " + hm.getOrDefault("Beacon1", rssi1) + " " + hm.getOrDefault("Beacon2", rssi2) + " " + hm.getOrDefault("Beacon3", rssi3));
+                count++;
+                if(count < 10) eventHandler.postDelayed(this, delay);
+                if (count == 10) {
+                    avgrssi1 = rssi1/10;
+                    avgrssi2 = rssi2/10;
+                    avgrssi3 = rssi3/10;
 
-        Date date = new Date();
-        String dateFormat = "yyyy-MM-dd HH:mm:ss";
-        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
-        String dateStr = sdf.format(date);
+                    Log.i("storeRSSI()", "Total values of RSSI " + count + " Values " + rssi1 + " " + rssi2 + " " + rssi3);
 
-        rowid = new String[] {Integer.toString(rowCounter)};
+                    Date date = new Date();
+                    String dateFormat = "yyyy-MM-dd HH:mm:ss";
+                    SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+                    String dateStr = sdf.format(date);
 
-        handler.updateRows(rowid, rssi1, rssi2, rssi3, dateStr);
+                    rowid = new String[] {Integer.toString(rowCounter)};
 
-        rowCounter++;
+                    Log.i("storeRSSI()", "Total values of RSSI " + count + " Values " + avgrssi1 + " " + avgrssi2 + " " + avgrssi3);
 
+                    handler.updateRows(rowid, avgrssi1, avgrssi2, avgrssi3, dateStr);
 
+                    Toast toast = Toast.makeText(MainActivity.this, "Point " + rowCounter + "loaded", Toast.LENGTH_SHORT);
+                    toast.show();
+                    rowCounter++;
+                }
+            }
+        }, delay);
     }
 
     //list adapter for displaying ble devices
