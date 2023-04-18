@@ -83,12 +83,18 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     //adds new row to the database - each row is a reference point, with rssi values of 3 beacons and timestamp
-    public void addRow(int rssi_beacon1, int rssi_beacon2, int rssi_beacon3, String timestamp, float xcoor, float ycoor, SQLiteDatabase db) {
+    public void addRow(float xcoor, float ycoor, SQLiteDatabase db) {
+
+        Date date = new Date();
+        String dateFormat = "yyyy-MM-dd HH:mm:ss";
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        String dateStr = sdf.format(date);
+
         ContentValues cv = new ContentValues();
-        cv.put(key_beacon1, rssi_beacon1);
-        cv.put(key_beacon2, rssi_beacon2);
-        cv.put(key_beacon3, rssi_beacon3);
-        cv.put(key_timestamp, timestamp);
+        cv.put(key_beacon1, 0);
+        cv.put(key_beacon2, 0);
+        cv.put(key_beacon3, 0);
+        cv.put(key_timestamp, dateStr);
         cv.put(key_x_coord, xcoor);
         cv.put(key_y_coord, ycoor);
 
@@ -116,8 +122,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 key_beacon1 + " INTEGER, " +
                 key_beacon2 + " INTEGER, " +
                 key_beacon3 + " INTEGER, " +
-                key_x_coord + "FLOAT, " +
-                key_y_coord + "FLOAT, " +
+                key_x_coord + " FLOAT, " +
+                key_y_coord + " FLOAT, " +
                 key_timestamp +" TEXT);");
 
         for (float x=0; x <= 210; x+=52.5) {
@@ -126,7 +132,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 String dateFormat = "yyyy-MM-dd HH:mm:ss";
                 SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
                 String dateStr = sdf.format(date);
-                addRow(0,0,0,dateStr, x, y, db);
+                addRow(x, y, db);
                 Log.i("Adding new row for database: ", "adding new row");
             }
         }

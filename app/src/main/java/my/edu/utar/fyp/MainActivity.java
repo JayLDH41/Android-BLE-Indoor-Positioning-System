@@ -28,6 +28,7 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -53,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
 
     private float x = 0;
     private float y = 0;
+    private String[] rowid = new String[]{};
+    private int rowCounter = 1;
 
 
     @SuppressLint("MissingPermission")
@@ -136,6 +139,11 @@ public class MainActivity extends AppCompatActivity {
     public void storeRSSI() {
         Log.i("storeRefPoint(): ", "storing RSSI values into database");
 
+        if(rowCounter == 25) {
+            Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
+            toast.show();
+            return;
+        }
         int rssi1, rssi2, rssi3;
 
         rssi1 = hm.getOrDefault("Beacon1", 0);
@@ -149,8 +157,13 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
         String dateStr = sdf.format(date);
 
-//        handler.addRow(rssi1, rssi2, rssi3, dateStr, x, y);
-//        handler.close();
+        rowid = new String[] {Integer.toString(rowCounter)};
+
+        handler.updateRows(rowid, rssi1, rssi2, rssi3, dateStr);
+
+        rowCounter++;
+
+
     }
 
     //list adapter for displaying ble devices
