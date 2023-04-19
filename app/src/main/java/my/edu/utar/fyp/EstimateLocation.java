@@ -18,6 +18,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -27,7 +28,7 @@ import java.util.Map;
 
 public class EstimateLocation extends AppCompatActivity {
 
-    Button btnStartEst, btnStopEst;
+    Button btnStartEst, btnStopEst, btnGetCurRSSI;
     TextView tvEstLocation, tvKNearestRefPt, tvCurRssi;
 
     BluetoothAdapter btAdapter;
@@ -45,6 +46,7 @@ public class EstimateLocation extends AppCompatActivity {
         //bind UI components
         btnStartEst = findViewById(R.id.btnStartEstimateLocation);
         btnStopEst = findViewById(R.id.btnStopEstimateLocation);
+        btnGetCurRSSI = findViewById(R.id.btnGetCurRSSI);
         tvEstLocation = findViewById(R.id.tvShowEstimatedLocation);
         tvKNearestRefPt = findViewById(R.id.tvShowKNearestRefPoint);
         tvCurRssi = findViewById(R.id.tvShowCurrentRssi);
@@ -59,6 +61,15 @@ public class EstimateLocation extends AppCompatActivity {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent,REQUEST_ENABLE_BT);
         }
+
+        //setup UI components
+        btnGetCurRSSI.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startScan();
+            }
+        });
+
     }
 
 

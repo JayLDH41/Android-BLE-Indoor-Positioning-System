@@ -10,6 +10,11 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="Get Current RSSI"
+        android:id="@+id/btnGetCurRSSI" />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="Estimate current location"
         android:id="@+id/btnStartEstimateLocation" />
     <Button
