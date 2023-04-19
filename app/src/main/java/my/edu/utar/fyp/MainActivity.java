@@ -146,8 +146,14 @@ public class MainActivity extends AppCompatActivity {
         toast1.show();
         Log.i("storeRSSI(): ", "running");
         Log.i("storeRSSI(): ", "Logging Point " + rowCounter);
+        rssi1=0;
+        rssi2=0;
+        rssi3=0;
+        avgrssi1=0;
+        avgrssi2=0;
+        avgrssi3=0;
 
-        if(rowCounter == 25) {
+        if(rowCounter == 26) {
             Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
             Log.i("storeRSSI()", "All points logged");
             toast.show();
