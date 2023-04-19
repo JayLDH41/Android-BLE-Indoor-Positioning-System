@@ -23,6 +23,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,10 +71,17 @@ public class EstimateLocation extends AppCompatActivity {
             }
         });
 
+        btnStopEst.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
+
     }
 
 
-
+    HashMap<String, Integer> hm1 = new HashMap<>();
     //receives scan results
     private final ScanCallback leScanCallback = new ScanCallback() {
         @Override
@@ -83,9 +91,10 @@ public class EstimateLocation extends AppCompatActivity {
             BluetoothDevice device = result.getDevice();
             int rssi = result.getRssi();
             @SuppressLint("MissingPermission") String deviceName = device.getName();
-
+            hm1.put(deviceName, rssi);
             if (deviceName != null) {
                 Log.i("leScanCallback", "Scan Result: " + deviceName + " " + "Device RSSI: " + rssi);
+                tvCurRssi.setText("CURRENT RSSI VALUES: \nBeacon1: " + hm1.getOrDefault("Beacon1", 0) + "\nBeacon2: " + hm1.getOrDefault("Beacon2", 0) + "\nBeacon3: " + hm1.getOrDefault("Beacon3", 0));
             }
         }
     };
