@@ -12,6 +12,11 @@
         android:layout_height="wrap_content"
         android:text="Estimate current location"
         android:id="@+id/btnStartEstimateLocation" />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stop Estimating"
+        android:id="@+id/btnStopEstimateLocation" />
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -21,7 +26,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/tvShowNearestRefPoint"
+        android:id="@+id/tvShowKNearestRefPoint"
         android:text="Show K Nearest Reference points" />
     <TextView
         android:layout_width="match_parent"

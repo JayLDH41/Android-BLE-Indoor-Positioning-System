@@ -16,6 +16,7 @@ public class StartPage extends AppCompatActivity {
 
         Button btnStartScanActivity = findViewById(R.id.btnStartScanActivity);
         Button btnViewDatabase = findViewById(R.id.btnViewDatabase);
+        Button btnStartEstimate = findViewById(R.id.btnStartEstimate);
 
         btnStartScanActivity.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -29,6 +30,14 @@ public class StartPage extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(StartPage.this, DatabasePage.class);
+                StartPage.this.startActivity(intent);
+            }
+        });
+
+        btnStartEstimate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(StartPage.this, EstimateLocation.class);
                 StartPage.this.startActivity(intent);
             }
         });
