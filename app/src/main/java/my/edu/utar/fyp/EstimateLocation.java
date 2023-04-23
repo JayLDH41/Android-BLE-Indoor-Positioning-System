@@ -116,8 +116,8 @@ public class EstimateLocation extends AppCompatActivity {
 
         //get latest rssi values
         int r1 = hm1.getOrDefault("Beacon1", 0);
-        int r2 = hm1.getOrDefault("Beacon1", 0);
-        int r3 = hm1.getOrDefault("Beacon1", 0);
+        int r2 = hm1.getOrDefault("Beacon2", 0);
+        int r3 = hm1.getOrDefault("Beacon3", 0);
 
 
         //current rssi screenshot
