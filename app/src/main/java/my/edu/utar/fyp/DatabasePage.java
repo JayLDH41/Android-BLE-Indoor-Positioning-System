@@ -31,7 +31,7 @@ public class DatabasePage extends AppCompatActivity {
         DatabaseHandler dbHandler = new DatabaseHandler(this);
         int dbSize = dbHandler.getRowCount();
         for(int i=1; i<=dbSize; i++) {
-            String text = dbHandler.getRecord(new String[] {Integer.toString(i)});
+            String text = dbHandler.getRecordStr(new String[] {Integer.toString(i)});
             adapter.addRow(text);
             adapter.notifyDataSetChanged();
         }

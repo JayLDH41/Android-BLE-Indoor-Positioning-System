@@ -9,6 +9,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
@@ -24,8 +26,36 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String key_y_coord = "Y_Coordinate";
     private static final String table_name = "Fingerprint_RSSI";
 
+    //returns all rssi values in array format
+    public double[][] getRssiArray() {
+        SQLiteDatabase db = getWritableDatabase();
+        String[] columns = new String[] {key_beacon1, key_beacon2, key_beacon3};
+        Cursor cursor = db.query(table_name, columns, null, null, null, null, null);
+
+        int rssi1Index = cursor.getColumnIndex(key_beacon1);
+        int rssi2Index = cursor.getColumnIndex(key_beacon2);
+        int rssi3Index = cursor.getColumnIndex(key_beacon3);
+
+        ArrayList<Double[]> rssiArrList = new ArrayList<>();
+
+        for (cursor.moveToFirst(); !(cursor.isAfterLast()); cursor.moveToNext()){
+            double rssi1 = cursor.getInt(rssi1Index);
+            double rssi2 = cursor.getInt(rssi2Index);
+            double rssi3 = cursor.getInt(rssi3Index);
+
+            rssiArrList.add(new Double[]{rssi1, rssi2, rssi3});
+        }
+
+        //convert arraylist<Integer[]> to int[][]
+        double[][] arrRssi = new double[rssiArrList.size()][];
+        for(int i=0; i<rssiArrList.size(); i++)
+            arrRssi[i] = Arrays.stream(rssiArrList.get(i)).mapToDouble(Double::doubleValue).toArray();
+
+        return arrRssi;
+    }
+
     //returns information of the specific row
-    public String getRecord(String[] rowId) {
+    public String getRecordStr(String[] rowId) {
         SQLiteDatabase db = getWritableDatabase();
         String[] columns = new String[] {"rowid", key_beacon1, key_beacon2, key_beacon3, key_timestamp, key_x_coord, key_y_coord};
         String whereClause = "rowid=?";

@@ -13,6 +13,7 @@ import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -26,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.math3.ml.distance.EuclideanDistance;
 
 public class EstimateLocation extends AppCompatActivity {
 
@@ -78,16 +81,24 @@ public class EstimateLocation extends AppCompatActivity {
             }
         });
 
+        btnStartEst.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startEstimation();
+            }
+        });
+
     }
 
 
+    //receives scan results and store into a hashmap
     HashMap<String, Integer> hm1 = new HashMap<>();
-    //receives scan results
     private final ScanCallback leScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
 
+            //get information of bluetooth device and display current RSSI values to user
             BluetoothDevice device = result.getDevice();
             int rssi = result.getRssi();
             @SuppressLint("MissingPermission") String deviceName = device.getName();
@@ -98,6 +109,51 @@ public class EstimateLocation extends AppCompatActivity {
             }
         }
     };
+
+    //start estimation
+    public void startEstimation() {
+
+        //get latest rssi values
+        int r1 = hm1.getOrDefault("Beacon1", 0);
+        int r2 = hm1.getOrDefault("Beacon1", 0);
+        int r3 = hm1.getOrDefault("Beacon1", 0);
+
+        //current rssi screenshot
+        double[] arrCurRssi = new double[] {r1, r2, r3};
+
+        //get offline rssis as array
+        DatabaseHandler handler = new DatabaseHandler(this);
+        double[][] offlineDataset = handler.getRssiArray();
+//        for (int i = 0; i < offlineDataset.length; i++)
+//            for (int j = 0; j < offlineDataset[i].length; j++)
+//                Log.d("Offline Dataset Array", "Element at [" + i + "][" + j + "]: " + offlineDataset[i][j]);
+
+        //now has int[] online and int[][] offline
+        //use euclidean distance to calculate distance between online and offline rssi values
+        ArrayList<Double> on_off_distances = new ArrayList<Double> ();
+        for(double[] offlineRow : offlineDataset) {
+            EuclideanDistance formula = new EuclideanDistance();
+            on_off_distances.add(formula.compute(arrCurRssi, offlineRow));
+        }
+
+        //now we have the result euclidean distance between each offline rssis and online rssi
+        //store them into hashmap for labeling purposes (coordinates, distance)
+        int counter = 0;
+        int rowNum = counter+1;
+        HashMap<Integer, Double> hmLabel = new HashMap<>();
+        for(int x=0; x<=210; x+=52.5)
+            for(int y=0; y<=210; y+=52.5) {
+                hmLabel.put(rowNum, on_off_distances.get(counter));
+                counter++;
+                rowNum++;
+            }
+
+        Log.d("hashmap result", hmLabel.toString());
+
+        //sort the euclidean distance arraylist into ascending order and get the first kth elements for localization
+    }
+
+
 
     private final String[] deviceMAC = new String[] {"C4:F2:E9:8B:3F:22", "D0:2A:EE:E2:AB:CE", "EB:7A:2E:78:8E:21"};
 
