@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +105,6 @@ public class EstimateLocation extends AppCompatActivity {
             @SuppressLint("MissingPermission") String deviceName = device.getName();
             hm1.put(deviceName, rssi);
             if (deviceName != null) {
-                Log.i("leScanCallback", "Scan Result: " + deviceName + " " + "Device RSSI: " + rssi);
                 tvCurRssi.setText("CURRENT RSSI VALUES: \nBeacon1: " + hm1.getOrDefault("Beacon1", 0) + "\nBeacon2: " + hm1.getOrDefault("Beacon2", 0) + "\nBeacon3: " + hm1.getOrDefault("Beacon3", 0));
             }
         }
@@ -113,20 +113,25 @@ public class EstimateLocation extends AppCompatActivity {
     //start estimation
     public void startEstimation() {
 
+
         //get latest rssi values
         int r1 = hm1.getOrDefault("Beacon1", 0);
         int r2 = hm1.getOrDefault("Beacon1", 0);
         int r3 = hm1.getOrDefault("Beacon1", 0);
 
+
         //current rssi screenshot
         double[] arrCurRssi = new double[] {r1, r2, r3};
+        Log.d("current rssi", arrCurRssi[0] + " " + arrCurRssi[1] + " " + arrCurRssi[2]);
+
 
         //get offline rssis as array
         DatabaseHandler handler = new DatabaseHandler(this);
         double[][] offlineDataset = handler.getRssiArray();
-//        for (int i = 0; i < offlineDataset.length; i++)
-//            for (int j = 0; j < offlineDataset[i].length; j++)
-//                Log.d("Offline Dataset Array", "Element at [" + i + "][" + j + "]: " + offlineDataset[i][j]);
+        for (int i = 0; i < offlineDataset.length; i++)
+            for (int j = 0; j < offlineDataset[i].length; j++)
+                Log.d("Offline Dataset Array", "Element at [" + i + "][" + j + "]: " + offlineDataset[i][j]);
+
 
         //now has int[] online and int[][] offline
         //use euclidean distance to calculate distance between online and offline rssi values
@@ -136,21 +141,69 @@ public class EstimateLocation extends AppCompatActivity {
             on_off_distances.add(formula.compute(arrCurRssi, offlineRow));
         }
 
+
         //now we have the result euclidean distance between each offline rssis and online rssi
-        //store them into hashmap for labeling purposes (coordinates, distance)
-        int counter = 0;
-        int rowNum = counter+1;
+        //store index : distance into a hashmap to later labeling
         HashMap<Integer, Double> hmLabel = new HashMap<>();
-        for(int x=0; x<=210; x+=52.5)
-            for(int y=0; y<=210; y+=52.5) {
-                hmLabel.put(rowNum, on_off_distances.get(counter));
-                counter++;
-                rowNum++;
+        for(int i=0; i<25; i++) {
+                hmLabel.put(i, on_off_distances.get(i));
             }
+        Log.d("Index:Distance HM Result", hmLabel.toString());
 
-        Log.d("hashmap result", hmLabel.toString());
 
-        //sort the euclidean distance arraylist into ascending order and get the first kth elements for localization
+        //sort the euclidean distance arraylist into ascending order
+        //and get the first kth elements for localization
+        ArrayList<Double> sortedDistances = new ArrayList<Double>();
+        for(int i=0; i<on_off_distances.size(); i++)
+            sortedDistances.add(on_off_distances.get(i));
+        Collections.sort(sortedDistances);
+
+        Log.d("Before sorting", on_off_distances.toString());
+        Log.d("After sorting", sortedDistances.toString());
+
+
+        //get the indices of the first 3 elements
+        ArrayList<Integer> indexList = new ArrayList<>();
+        int k = 3;
+        for(int i=0; i<k; i++)
+            for(Map.Entry<Integer, Double> entry : hmLabel.entrySet())
+                if(entry.getValue() == sortedDistances.get(i))
+                    indexList.add(entry.getKey());
+
+
+        //get the coordinates from these indexes
+        float[] coor1, coor2, coor3;
+        DatabaseHandler db = new DatabaseHandler(EstimateLocation.this);
+        int rownum;
+        rownum = indexList.get(0) + 1 ;
+        String row1 = Integer.toString(rownum);
+        coor1 = db.getCoordinates(new String[] {row1});
+
+        rownum = indexList.get(1) + 1;
+        String row2 = Integer.toString(rownum);
+        coor2 = db.getCoordinates(new String[] {row2});
+
+        rownum = indexList.get(2) + 1;
+        String row3 = Integer.toString(rownum);
+        coor3 = db.getCoordinates(new String[] {row3});
+
+        Log.d("1st coordinates", coor1[0] + " " + coor1[1]);
+        Log.d("2nd coordinates", coor2[0] + " " + coor2[1]);
+        Log.d("3rd coordinates", coor3[0] + " " + coor3[1]);
+
+
+        //estimate final coordinates of user
+        double estX, estY, totalWeight;
+        totalWeight = sortedDistances.get(0) + sortedDistances.get(1) + sortedDistances.get(2);
+        estX = coor1[0] * ((1/sortedDistances.get(0)) + coor2[0] * (1/sortedDistances.get(1)) + coor3[0] * (1/sortedDistances.get(2))) / totalWeight;
+        estY = coor1[1] * ((1/sortedDistances.get(0)) + coor2[1] * (1/sortedDistances.get(1)) + coor3[1] * (1/sortedDistances.get(2))) / totalWeight;
+
+        Log.d("K nearest neighbours", indexList.toString());
+        Log.d("estimated coordinates", estX + ", " +estY);
+
+        tvKNearestRefPt.setText("3 nearest neighbour point: " + indexList.toString());
+        tvEstLocation.setText("Estimated Location: (" + estX + ", " + estY + ")");
+
     }
 
 
