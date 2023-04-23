@@ -54,6 +54,26 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return arrRssi;
     }
 
+    //returns coordinates given the point number
+    public float[] getCoordinates(String[] rowId) {
+        SQLiteDatabase db = getWritableDatabase();
+        String[] columns = new String[] {"rowid", key_x_coord, key_y_coord};
+        String whereClause = "rowid=?";
+        Cursor cursor = db.query(table_name, columns, whereClause, rowId, null, null, null);
+
+        int xcoorIndex = cursor.getColumnIndex(key_x_coord);
+        int ycoorIndex = cursor.getColumnIndex(key_y_coord);
+        float[] coordinates = new float[0];
+        
+        if(cursor.moveToFirst()) {
+            float xcoor = cursor.getFloat(xcoorIndex);
+            float ycoor = cursor.getFloat(ycoorIndex);
+            coordinates = new float[] {xcoor, ycoor};
+        }
+        
+        return coordinates;
+    }
+    
     //returns information of the specific row
     public String getRecordStr(String[] rowId) {
         SQLiteDatabase db = getWritableDatabase();
