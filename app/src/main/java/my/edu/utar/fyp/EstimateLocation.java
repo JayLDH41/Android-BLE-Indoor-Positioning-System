@@ -126,6 +126,7 @@ public class EstimateLocation extends AppCompatActivity {
 
 
         //get offline rssis as array
+        //[25][3]
         DatabaseHandler handler = new DatabaseHandler(this);
         double[][] offlineDataset = handler.getRssiArray();
         for (int i = 0; i < offlineDataset.length; i++)
@@ -135,6 +136,7 @@ public class EstimateLocation extends AppCompatActivity {
 
         //now has int[] online and int[][] offline
         //use euclidean distance to calculate distance between online and offline rssi values
+        //on_off_distances[0-24]
         ArrayList<Double> on_off_distances = new ArrayList<Double> ();
         for(double[] offlineRow : offlineDataset) {
             EuclideanDistance formula = new EuclideanDistance();
@@ -144,6 +146,7 @@ public class EstimateLocation extends AppCompatActivity {
 
         //now we have the result euclidean distance between each offline rssis and online rssi
         //store index : distance into a hashmap to later labeling
+        //hmLabel range [0,24]
         HashMap<Integer, Double> hmLabel = new HashMap<>();
         for(int i=0; i<25; i++) {
                 hmLabel.put(i, on_off_distances.get(i));
