@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //set a button to stop scanning for signal
+        //click on this button to stop scanning
         btnStopScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //click on this button to snapshot and store rssi value
         btnRecordRss.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -153,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
         avgrssi2=0;
         avgrssi3=0;
 
+        //
         if(rowCounter == 26) {
             Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
             Log.i("storeRSSI()", "All points logged");
@@ -298,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //stop scanning
+    //stop scanning for ble signals
     @SuppressLint("MissingPermission")
     public void stopScan() {
         Log.i("BLE Scanner: ", "Stop Scanning");
