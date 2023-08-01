@@ -29,6 +29,13 @@
         android:text="Record RSS values"
         />
 
+    <Button
+        android:id="@+id/btnExportRssi"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Export RSSI into CSV file"
+        />
+
     <ListView
         android:id="@+id/lvScanResults"
         android:layout_width="match_parent"

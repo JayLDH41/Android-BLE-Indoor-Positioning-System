@@ -127,12 +127,15 @@ public class MainActivity extends AppCompatActivity {
             @SuppressLint("MissingPermission") String deviceName = device.getName();
 
             if (deviceName != null) {
-                Log.i("leScanCallback", " Adding device to list adapter & hashmap: Device name: " + deviceName + " " + "Device RSSI: " + rssi);
+//                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi);
                 adapter.addDevice(device, rssi);
                 adapter.notifyDataSetChanged();
-                hm.put(deviceName, rssi);
-                for (Map.Entry<String,Integer> entry : hm.entrySet())
-                    Log.i("leScanCallback", " HashMap result after onScanResult(): Key: " + entry.getKey() + " Value: " + entry.getValue());
+                recordToList(deviceName, rssi);
+
+                //log device and its rssi received
+//                hm.put(deviceName, rssi);
+//                for (Map.Entry<String,Integer> entry : hm.entrySet())
+//                    Log.i("leScanCallback", " HashMap result after onScanResult(): Key: " + entry.getKey() + " Value: " + entry.getValue());
             }
         }
     };
@@ -199,6 +202,25 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }, delay);
+    }
+
+    ArrayList<String> beaconNameList = new ArrayList<>();
+    ArrayList<Integer> rssiList = new ArrayList<>();
+    ArrayList<String> timestampList = new ArrayList<>();
+
+    //method to record down beacon name, rssi and timestamp into a csv file
+    public void recordToList (String beaconName, int rssi) {
+        beaconNameList.add(beaconName);
+        rssiList.add(rssi);
+
+        long curTimeMillis = System.currentTimeMillis();
+        Date curDate = new Date(curTimeMillis);
+        String dateFormat = "yyyy-MM-dd HH:mm:ss";
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        String formattedTimestamp = sdf.format(curDate);
+        timestampList.add(formattedTimestamp);
+
+        Log.i("Record to List", "Beacon: " + beaconName + " RSSI: " + rssi + " Timestamp: " + formattedTimestamp);
     }
 
     //list adapter for displaying ble devices on list view
@@ -272,6 +294,8 @@ public class MainActivity extends AppCompatActivity {
     //start scanning for signals - only get the RSSI from the 3 beacons
     public void startScan() {
         Log.i("startScan()", "Start scanning for BLE signals");
+        Toast toast = Toast.makeText(this, "Start scanning for BLE signals",Toast.LENGTH_SHORT);
+        toast.show();
 
         List<ScanFilter> filters = null;
         filters = new ArrayList<>();
@@ -304,6 +328,8 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("MissingPermission")
     public void stopScan() {
         Log.i("BLE Scanner: ", "Stop Scanning");
+        Toast toast = Toast.makeText(this, "Stop scanning",Toast.LENGTH_SHORT);
+        toast.show();
         btScanner.stopScan(leScanCallback);
     }
 
