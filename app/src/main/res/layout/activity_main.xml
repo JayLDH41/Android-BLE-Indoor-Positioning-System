@@ -23,11 +23,10 @@
          />
 
     <Button
-        android:id="@+id/btnRecordRSS"
+        android:id="@+id/btnTrackRSS"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Record RSS values"
-        />
+        android:text="Start recording RSS values" />
 
     <Button
         android:id="@+id/btnExportRssi"
@@ -36,11 +35,20 @@
         android:text="Export RSSI into CSV file"
         />
 
+    <Button
+        android:id="@+id/btnRecordRSS"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Save RSS values into database"
+        />
+
     <ListView
         android:id="@+id/lvScanResults"
         android:layout_width="match_parent"
-        android:layout_height="584dp"
+        android:layout_height="wrap_content"
         />
+
+
 
 
 </LinearLayout>

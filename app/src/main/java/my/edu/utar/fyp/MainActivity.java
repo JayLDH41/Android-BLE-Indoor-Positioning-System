@@ -31,11 +31,17 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -48,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
     Button btnStartScan;
     Button btnStopScan;
     Button btnRecordRss;
+    Button btnExportRss;
+    Button btnTrackRss;
     DeviceListAdapter adapter;
     ListView lv;
     Map<String, Integer> hm = new HashMap<String, Integer>();
@@ -57,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     private float y = 0;
     private String[] rowid = new String[]{};
     private int rowCounter = 1;
+    private int trackRSSI = 0;
 
 
     @SuppressLint("MissingPermission")
@@ -69,6 +78,8 @@ public class MainActivity extends AppCompatActivity {
         btnStartScan = findViewById(R.id.btnStartScan);
         btnStopScan = findViewById(R.id.btnStopScan);
         btnRecordRss = findViewById(R.id.btnRecordRSS);
+        btnExportRss = findViewById(R.id.btnExportRssi);
+        btnTrackRss = findViewById(R.id.btnTrackRSS);
         lv = findViewById(R.id.lvScanResults);
 
         //setting up list adapter
@@ -107,10 +118,26 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //click on this button to snapshot and store rssi value
-        btnRecordRss.setOnClickListener(new View.OnClickListener() {
+//        btnRecordRss.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                storeRSSI();
+//            }
+//        });
+
+        //click on this button to start tracking rssi values for exporting them into csv file
+        btnTrackRss.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                storeRSSI();
+                changeTrackingStatus();
+            }
+        });
+
+        //click on this button to export the rssi values into a csv file
+        btnExportRss.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                exportToCSV();
             }
         });
 
@@ -130,7 +157,8 @@ public class MainActivity extends AppCompatActivity {
 //                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi);
                 adapter.addDevice(device, rssi);
                 adapter.notifyDataSetChanged();
-                recordToList(deviceName, rssi);
+
+                if (trackRSSI == 1) recordToList(deviceName, rssi);
 
                 //log device and its rssi received
 //                hm.put(deviceName, rssi);
@@ -215,12 +243,58 @@ public class MainActivity extends AppCompatActivity {
 
         long curTimeMillis = System.currentTimeMillis();
         Date curDate = new Date(curTimeMillis);
-        String dateFormat = "yyyy-MM-dd HH:mm:ss";
-        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        String dateFormat = "HH:mm:ss.SSS";
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.ENGLISH);
         String formattedTimestamp = sdf.format(curDate);
         timestampList.add(formattedTimestamp);
 
         Log.i("Record to List", "Beacon: " + beaconName + " RSSI: " + rssi + " Timestamp: " + formattedTimestamp);
+    }
+
+    //method to export the beacon names, rssi values and timestamp into csv file
+    public void exportToCSV () {
+
+        String fName = "data";
+        String fileName = fName + ".csv";
+
+        try {
+            FileOutputStream fos = this.openFileOutput(fileName,Context.MODE_PRIVATE);
+            OutputStreamWriter osw = new OutputStreamWriter(fos);
+            PrintWriter writer = new PrintWriter(osw);
+
+            //construct the first row
+            writer.write("Beacon,RSSI,Timestamp\n");
+
+            //write data from the 3 lists into csv file
+            for(int i = 0; i < beaconNameList.size(); i++) {
+                String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + timestampList.get(i) + "\n";
+                writer.write(line);
+            }
+
+            writer.close();
+            Log.i("CSV writing", "CSV file written");
+            Toast toast = Toast.makeText(MainActivity.this, "CSV file exported", Toast.LENGTH_SHORT);
+            toast.show();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //change tracking status to enabled or disabled
+    public void changeTrackingStatus() {
+        if(trackRSSI == 0) {
+            trackRSSI = 1;
+            Toast toast = Toast.makeText(MainActivity.this, "Start tracking RSSI values", Toast.LENGTH_SHORT);
+            toast.show();
+        }
+
+        else {
+            trackRSSI = 0;
+            Toast toast = Toast.makeText(MainActivity.this, "Stop tracking RSSI values", Toast.LENGTH_SHORT);
+            toast.show();
+        }
+
     }
 
     //list adapter for displaying ble devices on list view
@@ -330,6 +404,7 @@ public class MainActivity extends AppCompatActivity {
         Log.i("BLE Scanner: ", "Stop Scanning");
         Toast toast = Toast.makeText(this, "Stop scanning",Toast.LENGTH_SHORT);
         toast.show();
+        changeTrackingStatus();
         btScanner.stopScan(leScanCallback);
     }
 
