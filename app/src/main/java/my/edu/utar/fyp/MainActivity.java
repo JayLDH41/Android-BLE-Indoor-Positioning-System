@@ -15,6 +15,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -31,7 +32,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -256,29 +259,57 @@ public class MainActivity extends AppCompatActivity {
 
         String fName = "data";
         String fileName = fName + ".csv";
+        String folderName = "myCSVFolder";
 
-        try {
-            FileOutputStream fos = this.openFileOutput(fileName,Context.MODE_PRIVATE);
-            OutputStreamWriter osw = new OutputStreamWriter(fos);
-            PrintWriter writer = new PrintWriter(osw);
+        if(isExternalStorageWritable()) {
+            File folder = new File(MainActivity.this.getExternalFilesDir(null), folderName);
 
-            //construct the first row
-            writer.write("Beacon,RSSI,Timestamp\n");
+            if(!folder.exists()) folder.mkdirs();
 
-            //write data from the 3 lists into csv file
-            for(int i = 0; i < beaconNameList.size(); i++) {
-                String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + timestampList.get(i) + "\n";
-                writer.write(line);
+            File csvFile = new File(folder, fileName);
+            try {
+                FileWriter writer = new FileWriter(csvFile);
+                writer.write("Beacon,RSSI,Timestamp\n");
+
+                for(int i = 0; i < beaconNameList.size(); i++) {
+                    String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + timestampList.get(i) + "\n";
+                    writer.write(line);
+                }
+
+                writer.close();
+                Log.i("CSV writing", "CSV file written");
+                Toast toast = Toast.makeText(MainActivity.this, "CSV file exported", Toast.LENGTH_SHORT);
+                toast.show();
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
+        }
 
-            writer.close();
-            Log.i("CSV writing", "CSV file written");
-            Toast toast = Toast.makeText(MainActivity.this, "CSV file exported", Toast.LENGTH_SHORT);
-            toast.show();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+
+
+//        try {
+//            FileOutputStream fos = this.openFileOutput(fileName,Context.MODE_PRIVATE);
+//            OutputStreamWriter osw = new OutputStreamWriter(fos);
+//            PrintWriter writer = new PrintWriter(osw);
+//
+//            //construct the first row
+//            writer.write("Beacon,RSSI,Timestamp\n");
+//
+//            //write data from the 3 lists into csv file
+//            for(int i = 0; i < beaconNameList.size(); i++) {
+//                String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + timestampList.get(i) + "\n";
+//                writer.write(line);
+//            }
+//
+//            writer.close();
+//            Log.i("CSV writing", "CSV file written");
+//            Toast toast = Toast.makeText(MainActivity.this, "CSV file exported", Toast.LENGTH_SHORT);
+//            toast.show();
+//        }
+//        catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     //change tracking status to enabled or disabled
@@ -419,6 +450,7 @@ public class MainActivity extends AppCompatActivity {
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
         };
 
         if (!hasPermissions(con, PERMISSIONS)) {
@@ -436,5 +468,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return true;
+    }
+
+    //check whether external storage is writable or not
+    public static boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        return Environment.MEDIA_MOUNTED.equals(state);
     }
 }
