@@ -32,6 +32,12 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.apache.commons.math3.filter.DefaultMeasurementModel;
+import org.apache.commons.math3.filter.DefaultProcessModel;
+import org.apache.commons.math3.filter.KalmanFilter;
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealVector;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -146,7 +152,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
     //receives scan results
+    KalmanFilterHelper kfHelper = new KalmanFilterHelper();
+    ArrayList<Integer> filteredRssi = new ArrayList<>();
     private final ScanCallback leScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -157,11 +166,32 @@ public class MainActivity extends AppCompatActivity {
             @SuppressLint("MissingPermission") String deviceName = device.getName();
 
             if (deviceName != null) {
-//                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi);
-                adapter.addDevice(device, rssi);
+
+                int smoothedRssi = 0;
+
+                //if filtered rssi is empty, smoothen the RAW rssi value and put it inside
+                //because the state can only be initialized with an rssi value, so have to create another function to make sure the state does not get reset
+                if (filteredRssi.isEmpty()) {
+                    smoothedRssi = kfHelper.smoothenRssiFirstTime(rssi);
+                    filteredRssi.add(smoothedRssi);
+                }
+
+                //if filtered rssi is not empty, take the latest RAW rssi value and filter the rssi value
+                //uses the same state in the kalmanfilterhelper object to make sure it is correct
+                else {
+                    smoothedRssi = kfHelper.smoothenRssi(rssi);
+                    filteredRssi.add(smoothedRssi);
+                }
+
+                //updates the textviews in the list
+                adapter.addDevice(device, rssi, smoothedRssi);
                 adapter.notifyDataSetChanged();
 
-                if (trackRSSI == 1) recordToList(deviceName, rssi);
+                //record to list for exporting to csv
+                if (trackRSSI == 1) recordToList(deviceName, rssi, smoothedRssi);
+
+                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi + " " + "KF Filtered RSSI: " + smoothedRssi);
+
 
                 //log device and its rssi received
 //                hm.put(deviceName, rssi);
@@ -235,14 +265,46 @@ public class MainActivity extends AppCompatActivity {
         }, delay);
     }
 
+    //uses kalman filter to smoothen the rssi value
+//    public int kalmanFiltering(int rssi) {
+//
+//        //setting up 2D arrays for the process model and measurement model
+//        double[][] stateTransition = {{1.0}};   //how the state evolves from one to another
+//        double[][] control = {{0.0}};   //control set to 0 as there aren't any external controls
+//        double[][] processNoise = {{0.01}}; //noises during process
+//        double[][] initialErrorCovariance = {{1.0}};    //initial error / covariance of state estimate
+//        DefaultProcessModel pModel = new DefaultProcessModel(stateTransition, control, processNoise);
+//
+//        double[][] measure = {{1.0}};   //how the state corresponds to the observed measurements
+//        double[][] measurementNoise = {{0.01}}; //noise in measurements (how much different from actual measurements)
+//        DefaultMeasurementModel mModel = new DefaultMeasurementModel(measure, measurementNoise);
+//
+//        KalmanFilter kf = new KalmanFilter(pModel, mModel);
+//
+//        RealVector state = new ArrayRealVector(new double[]{rssi});
+//
+//        kf.predict();
+//
+//        kf.correct(state);
+//
+//        RealVector smoothedState = kf.getStateEstimationVector();
+//
+//        double result = smoothedState.getEntry(0);
+//        return (int)result;
+//    }
+
+    //uses another custom method to improve the rssi accuracy
+
     ArrayList<String> beaconNameList = new ArrayList<>();
     ArrayList<Integer> rssiList = new ArrayList<>();
     ArrayList<String> timestampList = new ArrayList<>();
+    ArrayList<Integer> kfRssiList = new ArrayList<>();
 
     //method to record down beacon name, rssi and timestamp into a csv file
-    public void recordToList (String beaconName, int rssi) {
+    public void recordToList (String beaconName, int rssi, int kfRssi) {
         beaconNameList.add(beaconName);
         rssiList.add(rssi);
+        kfRssiList.add(kfRssi);
 
         long curTimeMillis = System.currentTimeMillis();
         Date curDate = new Date(curTimeMillis);
@@ -251,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
         String formattedTimestamp = sdf.format(curDate);
         timestampList.add(formattedTimestamp);
 
-        Log.i("Record to List", "Beacon: " + beaconName + " RSSI: " + rssi + " Timestamp: " + formattedTimestamp);
+        Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi + "; KF Rssi:" + kfRssi + "; Timestamp: " + formattedTimestamp);
     }
 
     //method to export the beacon names, rssi values and timestamp into csv file
@@ -269,10 +331,10 @@ public class MainActivity extends AppCompatActivity {
             File csvFile = new File(folder, fileName);
             try {
                 FileWriter writer = new FileWriter(csvFile);
-                writer.write("Beacon,RSSI,Timestamp\n");
+                writer.write("Beacon,RSSI,KF Rssi,Timestamp\n");
 
                 for(int i = 0; i < beaconNameList.size(); i++) {
-                    String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + timestampList.get(i) + "\n";
+                    String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + kfRssiList.get(i) + "," + timestampList.get(i) + "\n";
                     writer.write(line);
                 }
 
@@ -333,18 +395,21 @@ public class MainActivity extends AppCompatActivity {
         private Context context;
         private ArrayList<BluetoothDevice> devices;
         private ArrayList<Integer> rssis;
+        private ArrayList<Integer> kfRssis;
 
         public DeviceListAdapter(Context context) {
             super();
             this.context = context;
             devices = new ArrayList<>();
             rssis = new ArrayList<>();
+            kfRssis = new ArrayList<>();
         }
 
-        public void addDevice(BluetoothDevice device, int rssi) {
+        public void addDevice(BluetoothDevice device, int rssi, int kfRssi) {
             if(!devices.contains(device)) {
                 devices.add(device);
                 rssis.add(rssi);
+                kfRssis.add(kfRssi);
             }
 
             else {
@@ -387,9 +452,11 @@ public class MainActivity extends AppCompatActivity {
 
             TextView tvDeviceName = view.findViewById(R.id.tvDeviceName);
             TextView tvDeviceRSSI = view.findViewById(R.id.tvDeviceRSSI);
+            TextView tvDeviceKFRssi = view.findViewById(R.id.tvDeviceKFRssi);
 
             tvDeviceName.setText(devices.get(pos).getName());
-            tvDeviceRSSI.setText(rssis.get(pos).toString() + "dbm");
+            tvDeviceRSSI.setText("Raw RSSI value: " + rssis.get(pos).toString() + "dbm");
+            tvDeviceKFRssi.setText("Kalman Fitered RSSI value: " + kfRssis.get(pos).toString() + "dbm");
 
             return view;
         }
@@ -430,12 +497,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //stop scanning for ble signals
+    //reset particular global variables
     @SuppressLint("MissingPermission")
     public void stopScan() {
+
+        changeTrackingStatus();
+        filteredRssi.clear();
+
         Log.i("BLE Scanner: ", "Stop Scanning");
         Toast toast = Toast.makeText(this, "Stop scanning",Toast.LENGTH_SHORT);
         toast.show();
-        changeTrackingStatus();
         btScanner.stopScan(leScanCallback);
     }
 
