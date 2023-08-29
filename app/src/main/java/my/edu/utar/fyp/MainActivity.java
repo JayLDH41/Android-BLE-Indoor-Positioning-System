@@ -308,7 +308,7 @@ public class MainActivity extends AppCompatActivity {
 
         long curTimeMillis = System.currentTimeMillis();
         Date curDate = new Date(curTimeMillis);
-        String dateFormat = "HH:mm:ss.SSS";
+        String dateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
         SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.ENGLISH);
         String formattedTimestamp = sdf.format(curDate);
         timestampList.add(formattedTimestamp);
@@ -416,6 +416,7 @@ public class MainActivity extends AppCompatActivity {
                 int position = devices.indexOf(device);
                 if (position != -1) {
                     rssis.set(position, rssi);
+                    kfRssis.set(position, kfRssi);
                 }
             }
         }

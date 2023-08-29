@@ -31,7 +31,8 @@ public class KalmanFilterHelper {
     public int smoothenRssi(int rssi) {
         kalmanFilter.predict();
 
-        kalmanFilter.correct(state);
+        RealVector actualVector = new ArrayRealVector(new double[]{rssi});
+        kalmanFilter.correct(actualVector);
 
         RealVector smoothedState = kalmanFilter.getStateEstimationVector();
 
@@ -42,11 +43,11 @@ public class KalmanFilterHelper {
     //for first time rssi filtering only
     //to make sure that the internal state is not reset
     public int smoothenRssiFirstTime(int rssi) {
-        state = new ArrayRealVector(new double[]{rssi});
+        RealVector firstState = new ArrayRealVector(new double[]{rssi});
 
         kalmanFilter.predict();
 
-        kalmanFilter.correct(state);
+        kalmanFilter.correct(firstState);
 
         RealVector smoothedState = kalmanFilter.getStateEstimationVector();
 
