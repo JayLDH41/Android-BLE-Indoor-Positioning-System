@@ -155,8 +155,15 @@ public class MainActivity extends AppCompatActivity {
 
     //receives scan results
     KalmanFilterHelper kfHelper = new KalmanFilterHelper();
+    KalmanFilterHelper kfHelper2 = new KalmanFilterHelper();
     ArrayList<Integer> filteredRssi = new ArrayList<>();
-    private final ScanCallback leScanCallback = new ScanCallback() {
+    ArrayList<Integer> meanKFRssi = new ArrayList<>();
+    int inputCounter = 0;
+    int totalInputVal = 0;
+    int mean = 0;
+    int finalmean = 0;
+
+    private final ScanCallback leScanCallback = new  ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
@@ -168,30 +175,62 @@ public class MainActivity extends AppCompatActivity {
             if (deviceName != null) {
 
                 int smoothedRssi = 0;
+                int meanAndKFRssi = 0;
+                finalmean = 0;
 
+                //perform mean filter and kalman filter on RAW rssi values
+                //if input counter has not reached 10, adds raw rssi into the totalInputVal
+                totalInputVal += rssi;
+                inputCounter++;
+
+                //if reaches 10 inputs, perform mean filtering and reset variables
+                //then perform kalman filtering on the mean filtered values as well
+                if(inputCounter == 10) {
+
+                    //perform mean filtering
+                    mean = totalInputVal / inputCounter;
+                    finalmean = mean;
+
+                    //perform kalman filtering on mean values
+                    if(meanKFRssi.isEmpty()) {
+                        meanAndKFRssi = kfHelper.smoothenRssiFirstTime(mean);
+                        meanKFRssi.add(meanAndKFRssi);
+                    }
+
+                    else {
+                        meanAndKFRssi = kfHelper.smoothenRssi(mean);
+                        meanKFRssi.add(meanAndKFRssi);
+                    }
+
+                    //resets all related variables
+                    totalInputVal = 0;
+                    inputCounter = 0;
+                    mean = 0;
+                }
+
+                //working on raw rssi values directly
                 //if filtered rssi is empty, smoothen the RAW rssi value and put it inside
                 //because the state can only be initialized with an rssi value, so have to create another function to make sure the state does not get reset
                 if (filteredRssi.isEmpty()) {
-                    smoothedRssi = kfHelper.smoothenRssiFirstTime(rssi);
+                    smoothedRssi = kfHelper2.smoothenRssiFirstTime(rssi);
                     filteredRssi.add(smoothedRssi);
                 }
 
                 //if filtered rssi is not empty, take the latest RAW rssi value and filter the rssi value
-                //uses the same state in the kalmanfilterhelper object to make sure it is correct
+                //uses the same kalmanfilterhelper object to make sure it is correct
                 else {
-                    smoothedRssi = kfHelper.smoothenRssi(rssi);
+                    smoothedRssi = kfHelper2.smoothenRssi(rssi);
                     filteredRssi.add(smoothedRssi);
                 }
 
-                //updates the textviews in the list
-                adapter.addDevice(device, rssi, smoothedRssi);
+                //updates the textviews in the list to display to users
+                adapter.addDevice(device, rssi, smoothedRssi, meanAndKFRssi, finalmean);
                 adapter.notifyDataSetChanged();
 
-                //record to list for exporting to csv
-                if (trackRSSI == 1) recordToList(deviceName, rssi, smoothedRssi);
+                //if required, record to list for exporting to csv
+                if (trackRSSI == 1) recordToList(deviceName, rssi, smoothedRssi, finalmean, meanAndKFRssi);
 
-                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi + " " + "KF Filtered RSSI: " + smoothedRssi);
-
+                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi + " " + "Mean RSSI: " + finalmean + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
 
                 //log device and its rssi received
 //                hm.put(deviceName, rssi);
@@ -200,6 +239,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+
 
     int rssi1 = 0, rssi2 = 0, rssi3 = 0;
     int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
@@ -265,46 +305,21 @@ public class MainActivity extends AppCompatActivity {
         }, delay);
     }
 
-    //uses kalman filter to smoothen the rssi value
-//    public int kalmanFiltering(int rssi) {
-//
-//        //setting up 2D arrays for the process model and measurement model
-//        double[][] stateTransition = {{1.0}};   //how the state evolves from one to another
-//        double[][] control = {{0.0}};   //control set to 0 as there aren't any external controls
-//        double[][] processNoise = {{0.01}}; //noises during process
-//        double[][] initialErrorCovariance = {{1.0}};    //initial error / covariance of state estimate
-//        DefaultProcessModel pModel = new DefaultProcessModel(stateTransition, control, processNoise);
-//
-//        double[][] measure = {{1.0}};   //how the state corresponds to the observed measurements
-//        double[][] measurementNoise = {{0.01}}; //noise in measurements (how much different from actual measurements)
-//        DefaultMeasurementModel mModel = new DefaultMeasurementModel(measure, measurementNoise);
-//
-//        KalmanFilter kf = new KalmanFilter(pModel, mModel);
-//
-//        RealVector state = new ArrayRealVector(new double[]{rssi});
-//
-//        kf.predict();
-//
-//        kf.correct(state);
-//
-//        RealVector smoothedState = kf.getStateEstimationVector();
-//
-//        double result = smoothedState.getEntry(0);
-//        return (int)result;
-//    }
-
-    //uses another custom method to improve the rssi accuracy
 
     ArrayList<String> beaconNameList = new ArrayList<>();
     ArrayList<Integer> rssiList = new ArrayList<>();
     ArrayList<String> timestampList = new ArrayList<>();
+    ArrayList<Integer> mfkfRssiList = new ArrayList<>();
     ArrayList<Integer> kfRssiList = new ArrayList<>();
+    ArrayList<Integer> mfRssiList = new ArrayList<>();
 
     //method to record down beacon name, rssi and timestamp into a csv file
-    public void recordToList (String beaconName, int rssi, int kfRssi) {
+    public void recordToList (String beaconName, int rssi, int kfRssi, int mfRssi, int mfkfRssi) {
         beaconNameList.add(beaconName);
         rssiList.add(rssi);
         kfRssiList.add(kfRssi);
+        mfRssiList.add(mfRssi);
+        mfkfRssiList.add(mfkfRssi);
 
         long curTimeMillis = System.currentTimeMillis();
         Date curDate = new Date(curTimeMillis);
@@ -313,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
         String formattedTimestamp = sdf.format(curDate);
         timestampList.add(formattedTimestamp);
 
-        Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi + "; KF Rssi:" + kfRssi + "; Timestamp: " + formattedTimestamp);
+        Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi + "; KF Rssi:" + kfRssi + "; MF Rssi: " + mfRssi + "; MFKF Rssi: " + mfkfRssi + "; Timestamp: " + formattedTimestamp);
     }
 
     //method to export the beacon names, rssi values and timestamp into csv file
@@ -331,10 +346,10 @@ public class MainActivity extends AppCompatActivity {
             File csvFile = new File(folder, fileName);
             try {
                 FileWriter writer = new FileWriter(csvFile);
-                writer.write("Beacon,RSSI,KF Rssi,Timestamp\n");
+                writer.write("Beacon,RSSI,KF Rssi,MF Rssi,MFKF Rssi,Timestamp\n");
 
                 for(int i = 0; i < beaconNameList.size(); i++) {
-                    String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + kfRssiList.get(i) + "," + timestampList.get(i) + "\n";
+                    String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + kfRssiList.get(i) + "," + mfRssiList.get(i) + "," + mfkfRssiList.get(i) + "," +  timestampList.get(i) + "\n";
                     writer.write(line);
                 }
 
@@ -396,6 +411,8 @@ public class MainActivity extends AppCompatActivity {
         private ArrayList<BluetoothDevice> devices;
         private ArrayList<Integer> rssis;
         private ArrayList<Integer> kfRssis;
+        private ArrayList<Integer> mfkfRssis;
+        private ArrayList<Integer> mfRssis;
 
         public DeviceListAdapter(Context context) {
             super();
@@ -403,13 +420,17 @@ public class MainActivity extends AppCompatActivity {
             devices = new ArrayList<>();
             rssis = new ArrayList<>();
             kfRssis = new ArrayList<>();
+            mfkfRssis = new ArrayList<>();
+            mfRssis = new ArrayList<>();
         }
 
-        public void addDevice(BluetoothDevice device, int rssi, int kfRssi) {
+        public void addDevice(BluetoothDevice device, int rssi, int kfRssi, int mfkfRssi, int mfRssi) {
             if(!devices.contains(device)) {
                 devices.add(device);
                 rssis.add(rssi);
                 kfRssis.add(kfRssi);
+                mfkfRssis.add(mfkfRssi);
+                mfRssis.add(mfRssi);
             }
 
             else {
@@ -417,6 +438,8 @@ public class MainActivity extends AppCompatActivity {
                 if (position != -1) {
                     rssis.set(position, rssi);
                     kfRssis.set(position, kfRssi);
+                    mfkfRssis.set(position, mfkfRssi);
+                    mfRssis.set(position, mfRssi);
                 }
             }
         }
@@ -454,10 +477,14 @@ public class MainActivity extends AppCompatActivity {
             TextView tvDeviceName = view.findViewById(R.id.tvDeviceName);
             TextView tvDeviceRSSI = view.findViewById(R.id.tvDeviceRSSI);
             TextView tvDeviceKFRssi = view.findViewById(R.id.tvDeviceKFRssi);
+            TextView tvDeviceMFRssi = view.findViewById(R.id.tvDeviceMFRssi);
+            TextView tvDeviceMFKFRssi = view.findViewById(R.id.tvDeviceMFKFRssi);
 
             tvDeviceName.setText(devices.get(pos).getName());
             tvDeviceRSSI.setText("Raw RSSI value: " + rssis.get(pos).toString() + "dbm");
-            tvDeviceKFRssi.setText("Kalman Fitered RSSI value: " + kfRssis.get(pos).toString() + "dbm");
+            tvDeviceKFRssi.setText("Kalman Filtered RSSI value: " + kfRssis.get(pos).toString() + "dbm");
+            tvDeviceMFRssi.setText("Mean filtered RSSI value: " + mfRssis.get(pos).toString() + "dbm");
+            tvDeviceMFKFRssi.setText("Mean & Kalman Filtered RSSI value: " + mfkfRssis.get(pos).toString() + "dbm");
 
             return view;
         }
