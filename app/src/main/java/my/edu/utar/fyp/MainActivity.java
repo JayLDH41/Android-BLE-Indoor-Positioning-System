@@ -157,14 +157,14 @@ public class MainActivity extends AppCompatActivity {
 
 
     //receives scan results
-    KalmanFilterHelper kfHelper = new KalmanFilterHelper();
-    KalmanFilterHelper kfHelper2 = new KalmanFilterHelper();
-    ArrayList<Integer> filteredRssi = new ArrayList<>();
-    ArrayList<Integer> meanKFRssi = new ArrayList<>();
-    int inputCounter = 0;
-    int totalInputVal = 0;
-    int mean = 0;
-    int finalmean = 0;
+    KalmanFilterHelper kfHelper;
+    KalmanFilterHelper kfHelper2;
+    ArrayList<Integer> filteredRssis;
+    ArrayList<Integer> meanKFRssis;
+    int inputCounter;
+    int totalInputVal;
+    int mean;
+    int finalmean;
 
     private final ScanCallback leScanCallback = new  ScanCallback() {
         @Override
@@ -195,14 +195,16 @@ public class MainActivity extends AppCompatActivity {
                     finalmean = mean;
 
                     //perform kalman filtering on mean values
-                    if(meanKFRssi.isEmpty()) {
+                    //if list is empty -> means first input -> create a state in kfhelper
+                    if(meanKFRssis.isEmpty()) {
                         meanAndKFRssi = kfHelper.smoothenRssiFirstTime(mean);
-                        meanKFRssi.add(meanAndKFRssi);
+                        meanKFRssis.add(meanAndKFRssi);
                     }
 
+                    //if list has values -> means not first input -> use the same state within the kfhelper
                     else {
                         meanAndKFRssi = kfHelper.smoothenRssi(mean);
-                        meanKFRssi.add(meanAndKFRssi);
+                        meanKFRssis.add(meanAndKFRssi);
                     }
 
                     //resets all related variables
@@ -214,23 +216,23 @@ public class MainActivity extends AppCompatActivity {
                 //working on raw rssi values directly
                 //if filtered rssi is empty, smoothen the RAW rssi value and put it inside
                 //because the state can only be initialized with an rssi value, so have to create another function to make sure the state does not get reset
-                if (filteredRssi.isEmpty()) {
+                if (filteredRssis.isEmpty()) {
                     smoothedRssi = kfHelper2.smoothenRssiFirstTime(rssi);
-                    filteredRssi.add(smoothedRssi);
+                    filteredRssis.add(smoothedRssi);
                 }
 
                 //if filtered rssi is not empty, take the latest RAW rssi value and filter the rssi value
                 //uses the same kalmanfilterhelper object to make sure it is correct
                 else {
                     smoothedRssi = kfHelper2.smoothenRssi(rssi);
-                    filteredRssi.add(smoothedRssi);
+                    filteredRssis.add(smoothedRssi);
                 }
 
                 //updates the textviews in the list to display to users
                 adapter.addDevice(device, rssi, smoothedRssi, meanAndKFRssi, finalmean);
                 adapter.notifyDataSetChanged();
 
-                //if required, record to list for exporting to csv
+                //if enabled (by pressing the button), record to list for exporting to csv
                 if (trackRSSI == 1) recordToList(deviceName, rssi, smoothedRssi, finalmean, meanAndKFRssi);
 
                 Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi + " " + "Mean RSSI: " + finalmean + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
@@ -247,7 +249,8 @@ public class MainActivity extends AppCompatActivity {
     int rssi1 = 0, rssi2 = 0, rssi3 = 0;
     int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
 
-    //method to store RSSI values into database
+    //method to store RSSI values from all 3 beacons into database
+    //but need to decide which to use
     public void storeRSSI() {
         Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + "logging", Toast.LENGTH_SHORT);
         toast1.show();
@@ -309,12 +312,14 @@ public class MainActivity extends AppCompatActivity {
 
 
     //lists that are used to track down data for exporting to csv file
-    ArrayList<String> beaconNameList = new ArrayList<>();
-    ArrayList<Integer> rssiList = new ArrayList<>();
-    ArrayList<String> timestampList = new ArrayList<>();
-    ArrayList<Integer> mfkfRssiList = new ArrayList<>();
-    ArrayList<Integer> kfRssiList = new ArrayList<>();
-    ArrayList<Integer> mfRssiList = new ArrayList<>();
+    //stop scanning will not clear these values -> so that user can click on "export to csv file" button after stop scanning
+    //but if want to scan RSSI values again, will clear these values -> means that track new data for exporting
+    ArrayList<String> beaconNameList;
+    ArrayList<Integer> rssiList;
+    ArrayList<String> timestampList;
+    ArrayList<Integer> mfkfRssiList;
+    ArrayList<Integer> kfRssiList;
+    ArrayList<Integer> mfRssiList;
 
     //method to record down beacon name, rssi and timestamp into a csv file
     public void recordToList (String beaconName, int rssi, int kfRssi, int mfRssi, int mfkfRssi) {
@@ -335,7 +340,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //method to export the beacon names, rssi values and timestamp into csv file
-    //after exporting, will clear out the data that are being tracked
+    //only runs after the alert dialog box appears for user to input file name
+    //after exporting, will still remain data for exporting again into different file name
     public void exportToCSV (String dialogValue) {
 
         String fName = dialogValue;
@@ -367,16 +373,11 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
-            beaconNameList.clear();
-            rssiList.clear();
-            kfRssiList.clear();
-            mfRssiList.clear();
-            mfkfRssiList.clear();
-            timestampList.clear();
         }
     }
 
+    //creates an alert dialog for user to input file name for csv file
+    //after prompting file name -> will proceed to next function to write data into csv file (either using default name or user input as file name)
     EditText edittextinput;
     public void promptInputFileName() {
 
@@ -387,6 +388,7 @@ public class MainActivity extends AppCompatActivity {
         edittextinput = new EditText(MainActivity.this);
         alert.setView(edittextinput);
 
+        //if "submit", gets input from edittext and write data to csv file
         alert.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -396,6 +398,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //if "use default naming", use default name for csv file and write data to it
         alert.setNegativeButton("Use default naming", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -513,14 +516,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //start scanning for signals - only get the RSSI from the 3 beacons
+    //resets all global variables before starting as this is the first function to be called -> if not will use previous data for next scanning activity
     public void startScan() {
         Log.i("startScan()", "Start scanning for BLE signals");
         Toast toast = Toast.makeText(this, "Start scanning for BLE signals",Toast.LENGTH_SHORT);
         toast.show();
 
+        //creates a new kalman filter object each time start scanning
+        kfHelper = new KalmanFilterHelper();
+        kfHelper2 = new KalmanFilterHelper();
+
+        //re-initialize all global variables
+        filteredRssis = new ArrayList<>();
+        meanKFRssis = new ArrayList<>();
+        inputCounter = 0;
+        totalInputVal = 0;
+        mean = 0;
+        finalmean = 0;
+        beaconNameList = new ArrayList<>();
+        rssiList = new ArrayList<>();
+        timestampList = new ArrayList<>();
+        mfkfRssiList = new ArrayList<>();
+        kfRssiList = new ArrayList<>();
+        mfRssiList = new ArrayList<>();
+
+        //preparing filters for scanning BLE signals
         List<ScanFilter> filters = null;
         filters = new ArrayList<>();
 
+        //uses MAC address to filter out BLE beacons
         for (String mac : deviceMAC) {
             ScanFilter filter = new ScanFilter.Builder().setDeviceAddress(mac).build();
             filters.add(filter);
@@ -546,12 +570,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //stop scanning for ble signals
-    //reset particular global variables
+    //resetting variables is not done here as still need data for exporting to csv later if required
     @SuppressLint("MissingPermission")
     public void stopScan() {
 
-        changeTrackingStatus();
-        filteredRssi.clear();
+        //stop tracking RSSI values if it has been enabled
+        if (trackRSSI == 1) changeTrackingStatus();
 
         Log.i("BLE Scanner: ", "Stop Scanning");
         Toast toast = Toast.makeText(this, "Stop scanning",Toast.LENGTH_SHORT);
