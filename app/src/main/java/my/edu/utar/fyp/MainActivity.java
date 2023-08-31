@@ -245,7 +245,6 @@ public class MainActivity extends AppCompatActivity {
     int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
 
     //method to store RSSI values into database
-    //each point 20 seconds - 2 second interval = 10 RSS values -> stores average RSS as offline RSSIs
     public void storeRSSI() {
         Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + "logging", Toast.LENGTH_SHORT);
         toast1.show();
@@ -306,6 +305,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    //lists that are used to track down data for exporting to csv file
     ArrayList<String> beaconNameList = new ArrayList<>();
     ArrayList<Integer> rssiList = new ArrayList<>();
     ArrayList<String> timestampList = new ArrayList<>();
@@ -332,6 +332,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //method to export the beacon names, rssi values and timestamp into csv file
+    //after exporting, will clear out the data that are being tracked
     public void exportToCSV () {
 
         String fName = "data";
@@ -361,35 +362,17 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
+            beaconNameList.clear();
+            rssiList.clear();
+            kfRssiList.clear();
+            mfRssiList.clear();
+            mfkfRssiList.clear();
+            timestampList.clear();
         }
-
-
-
-//        try {
-//            FileOutputStream fos = this.openFileOutput(fileName,Context.MODE_PRIVATE);
-//            OutputStreamWriter osw = new OutputStreamWriter(fos);
-//            PrintWriter writer = new PrintWriter(osw);
-//
-//            //construct the first row
-//            writer.write("Beacon,RSSI,Timestamp\n");
-//
-//            //write data from the 3 lists into csv file
-//            for(int i = 0; i < beaconNameList.size(); i++) {
-//                String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + timestampList.get(i) + "\n";
-//                writer.write(line);
-//            }
-//
-//            writer.close();
-//            Log.i("CSV writing", "CSV file written");
-//            Toast toast = Toast.makeText(MainActivity.this, "CSV file exported", Toast.LENGTH_SHORT);
-//            toast.show();
-//        }
-//        catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
-    //change tracking status to enabled or disabled
+    //change tracking status to enabled or disabled -- to enable the system to track the RSSI values for exporting later
     public void changeTrackingStatus() {
         if(trackRSSI == 0) {
             trackRSSI = 1;
