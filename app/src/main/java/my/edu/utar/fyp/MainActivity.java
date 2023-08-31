@@ -3,6 +3,7 @@ package my.edu.utar.fyp;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
@@ -12,6 +13,7 @@ import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
@@ -28,6 +30,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -146,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
         btnExportRss.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                exportToCSV();
+                promptInputFileName();
             }
         });
 
@@ -333,13 +336,15 @@ public class MainActivity extends AppCompatActivity {
 
     //method to export the beacon names, rssi values and timestamp into csv file
     //after exporting, will clear out the data that are being tracked
-    public void exportToCSV () {
+    public void exportToCSV (String dialogValue) {
 
-        String fName = "data";
+        String fName = dialogValue;
         String fileName = fName + ".csv";
         String folderName = "myCSVFolder";
+        Log.i("fName", fName);
 
         if(isExternalStorageWritable()) {
+
             File folder = new File(MainActivity.this.getExternalFilesDir(null), folderName);
 
             if(!folder.exists()) folder.mkdirs();
@@ -370,6 +375,39 @@ public class MainActivity extends AppCompatActivity {
             mfkfRssiList.clear();
             timestampList.clear();
         }
+    }
+
+    EditText edittextinput;
+    public void promptInputFileName() {
+
+        AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this);
+
+        alert.setTitle("Enter File Name");
+        alert.setMessage("Enter name for your csv file");
+        edittextinput = new EditText(MainActivity.this);
+        alert.setView(edittextinput);
+
+        alert.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                String value = edittextinput.getText().toString();
+                exportToCSV(value);
+                dialogInterface.cancel();
+            }
+        });
+
+        alert.setNegativeButton("Use default naming", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                String value = "defaultdata";
+                exportToCSV(value);
+                dialogInterface.cancel();
+            }
+        });
+
+        AlertDialog alertDialog = alert.create();
+        alertDialog.show();
+
     }
 
     //change tracking status to enabled or disabled -- to enable the system to track the RSSI values for exporting later
