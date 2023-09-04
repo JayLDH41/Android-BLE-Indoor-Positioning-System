@@ -59,7 +59,6 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
 
     private final int REQUEST_ENABLE_BT = 1;
-    private ArrayList<String> resultListName = new ArrayList<>();
     private final String[] deviceMAC = new String[] {"C4:F2:E9:8B:3F:22", "D0:2A:EE:E2:AB:CE", "EB:7A:2E:78:8E:21"};
     BluetoothAdapter btAdapter;
     BluetoothLeScanner btScanner;
@@ -73,8 +72,6 @@ public class MainActivity extends AppCompatActivity {
     Map<String, Integer> hm = new HashMap<String, Integer>();
     DatabaseHandler handler = new DatabaseHandler(this);
 
-    private float x = 0;
-    private float y = 0;
     private String[] rowid = new String[]{};
     private int rowCounter = 1;
     private int trackRSSI = 0;
@@ -149,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
         btnExportRss.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                promptInputFileName();
+                exportToCSV();
             }
         });
 
@@ -157,14 +154,11 @@ public class MainActivity extends AppCompatActivity {
 
 
     //receives scan results
-    KalmanFilterHelper kfHelper;
-    KalmanFilterHelper kfHelper2;
-    ArrayList<Integer> filteredRssis;
-    ArrayList<Integer> meanKFRssis;
-    int inputCounter;
-    int totalInputVal;
-    int mean;
-    int finalmean;
+    KalmanFilterHelper kfBeacon1, kfBeacon2, kfBeacon3;
+    ArrayList<Integer> meanKFRssis1, meanKFRssis2, meanKFRssis3;
+    int inputCounter1, inputCounter2, inputCounter3;
+    int totalInputVal1, totalInputVal2, totalInputVal3;
+    int finalmean1, finalmean2, finalmean3;
 
     private final ScanCallback leScanCallback = new  ScanCallback() {
         @Override
@@ -175,72 +169,152 @@ public class MainActivity extends AppCompatActivity {
             int rssi = result.getRssi();
             @SuppressLint("MissingPermission") String deviceName = device.getName();
 
+            //performs mean & kalman filtering here
+            //filtering is independent as they have their own distribution
             if (deviceName != null) {
 
-                int smoothedRssi = 0;
-                int meanAndKFRssi = 0;
-                finalmean = 0;
+                Log.i("leScanCallback", "Device found! Device Name: " + deviceName + " " + "Device RSSI: " + rssi);
 
-                //perform mean filter and kalman filter on RAW rssi values
-                //if input counter has not reached 10, adds raw rssi into the totalInputVal
-                totalInputVal += rssi;
-                inputCounter++;
+                switch (deviceName) {
+                    case "Beacon1": {
+                        int meanAndKFRssi = 0;
+                        int mean;
+                        finalmean1 = 0;
 
-                //if reaches 10 inputs, perform mean filtering and reset variables
-                //then perform kalman filtering on the mean filtered values as well
-                if(inputCounter == 10) {
+                        totalInputVal1 += rssi;
+                        inputCounter1++;
 
-                    //perform mean filtering
-                    mean = totalInputVal / inputCounter;
-                    finalmean = mean;
+                        if (inputCounter1 == 10) {
 
-                    //perform kalman filtering on mean values
-                    //if list is empty -> means first input -> create a state in kfhelper
-                    if(meanKFRssis.isEmpty()) {
-                        meanAndKFRssi = kfHelper.smoothenRssiFirstTime(mean);
-                        meanKFRssis.add(meanAndKFRssi);
+                            //mean filtering on RSSI Beacon 1
+                            mean = totalInputVal1 / inputCounter1;
+                            finalmean1 = mean;
+
+                            //kalman filtering on mean RSSI Beacon 1
+
+                            //1st time: create a new state for kalman filter
+                            if (meanKFRssis1.isEmpty()) {
+                                meanAndKFRssi = kfBeacon1.smoothenRssiFirstTime(rssi);
+                                meanKFRssis1.add(meanAndKFRssi);
+                            }
+
+                            //not 1st time: use current state from particular kalman filter
+                            else {
+                                meanAndKFRssi = kfBeacon1.smoothenRssi(rssi);
+                                meanKFRssis1.add(meanAndKFRssi);
+                            }
+
+                            //resets all variables for next calculation
+                            totalInputVal1 = 0;
+                            inputCounter1 = 0;
+                        }
+
+                        //displays data to user
+                        adapter.addDevice(device, rssi, finalmean1, meanAndKFRssi);
+                        adapter.notifyDataSetChanged();
+
+                        //if enabled tracking, record to list for exporting later
+                        if (trackRSSI == 1)
+                            recordToList(deviceName, rssi, finalmean1, meanAndKFRssi);
+
+                        //adds smoothened value to hashmap
+
+                        Log.i("Beacon1 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean1 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
+                        break;
                     }
+                    case "Beacon2": {
+                        int meanAndKFRssi = 0;
+                        int mean;
+                        finalmean2 = 0;
 
-                    //if list has values -> means not first input -> use the same state within the kfhelper
-                    else {
-                        meanAndKFRssi = kfHelper.smoothenRssi(mean);
-                        meanKFRssis.add(meanAndKFRssi);
+                        totalInputVal2 += rssi;
+                        inputCounter2++;
+
+                        if (inputCounter2 == 10) {
+
+                            //mean filtering on RSSI Beacon 1
+                            mean = totalInputVal2 / inputCounter2;
+                            finalmean2 = mean;
+
+                            //kalman filtering on mean RSSI Beacon 1
+
+                            //1st time: create a new state for kalman filter
+                            if (meanKFRssis2.isEmpty()) {
+                                meanAndKFRssi = kfBeacon2.smoothenRssiFirstTime(rssi);
+                                meanKFRssis2.add(meanAndKFRssi);
+                            }
+
+                            //not 1st time: use current state from particular kalman filter
+                            else {
+                                meanAndKFRssi = kfBeacon2.smoothenRssi(rssi);
+                                meanKFRssis2.add(meanAndKFRssi);
+                            }
+
+                            //resets all variables for next calculation
+                            totalInputVal2 = 0;
+                            inputCounter2 = 0;
+                        }
+
+                        //displays data to user
+                        adapter.addDevice(device, rssi, finalmean2, meanAndKFRssi);
+                        adapter.notifyDataSetChanged();
+
+                        //if enabled tracking, record to list for exporting later
+                        if (trackRSSI == 1)
+                            recordToList(deviceName, rssi, finalmean2, meanAndKFRssi);
+
+                        Log.i("Beacon2 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean2 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
+                        break;
                     }
+                    case "Beacon3": {
+                        int meanAndKFRssi = 0;
+                        int mean;
+                        finalmean3 = 0;
 
-                    //resets all related variables
-                    totalInputVal = 0;
-                    inputCounter = 0;
-                    mean = 0;
+                        totalInputVal3 += rssi;
+                        inputCounter3++;
+
+                        if (inputCounter3 == 10) {
+
+                            //mean filtering on RSSI Beacon 1
+                            mean = totalInputVal3 / inputCounter3;
+                            finalmean3 = mean;
+
+                            //kalman filtering on mean RSSI Beacon 1
+
+                            //1st time: create a new state for kalman filter
+                            if (meanKFRssis3.isEmpty()) {
+                                meanAndKFRssi = kfBeacon3.smoothenRssiFirstTime(rssi);
+                                meanKFRssis3.add(meanAndKFRssi);
+                            }
+
+                            //not 1st time: use current state from particular kalman filter
+                            else {
+                                meanAndKFRssi = kfBeacon3.smoothenRssi(rssi);
+                                meanKFRssis3.add(meanAndKFRssi);
+                            }
+
+                            //resets all variables for next calculation
+                            totalInputVal3 = 0;
+                            inputCounter3 = 0;
+                        }
+
+                        //displays data to user
+                        adapter.addDevice(device, rssi, finalmean3, meanAndKFRssi);
+                        adapter.notifyDataSetChanged();
+
+                        //if enabled tracking, record to list for exporting later
+                        if (trackRSSI == 1)
+                            recordToList(deviceName, rssi, finalmean3, meanAndKFRssi);
+
+                        Log.i("Beacon3 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean3 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
+                        break;
+                    }
+                    default:
+                        Toast toast = Toast.makeText(MainActivity.this, "Scanned device is not one of the beacons", Toast.LENGTH_SHORT);
+                        toast.show();
+                        break;
                 }
-
-                //working on raw rssi values directly
-                //if filtered rssi is empty, smoothen the RAW rssi value and put it inside
-                //because the state can only be initialized with an rssi value, so have to create another function to make sure the state does not get reset
-                if (filteredRssis.isEmpty()) {
-                    smoothedRssi = kfHelper2.smoothenRssiFirstTime(rssi);
-                    filteredRssis.add(smoothedRssi);
-                }
-
-                //if filtered rssi is not empty, take the latest RAW rssi value and filter the rssi value
-                //uses the same kalmanfilterhelper object to make sure it is correct
-                else {
-                    smoothedRssi = kfHelper2.smoothenRssi(rssi);
-                    filteredRssis.add(smoothedRssi);
-                }
-
-                //updates the textviews in the list to display to users
-                adapter.addDevice(device, rssi, smoothedRssi, meanAndKFRssi, finalmean);
-                adapter.notifyDataSetChanged();
-
-                //if enabled (by pressing the button), record to list for exporting to csv
-                if (trackRSSI == 1) recordToList(deviceName, rssi, smoothedRssi, finalmean, meanAndKFRssi);
-
-                Log.i("leScanCallback", "Device name: " + deviceName + " " + "Device RSSI: "+ rssi + " " + "Mean RSSI: " + finalmean + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
-
-                //log device and its rssi received
-//                hm.put(deviceName, rssi);
-//                for (Map.Entry<String,Integer> entry : hm.entrySet())
-//                    Log.i("leScanCallback", " HashMap result after onScanResult(): Key: " + entry.getKey() + " Value: " + entry.getValue());
             }
         }
     };
@@ -249,107 +323,153 @@ public class MainActivity extends AppCompatActivity {
     //lists that are used to track down data for exporting to csv file
     //stop scanning will not clear these values -> so that user can click on "export to csv file" button after stop scanning
     //but if want to scan RSSI values again, will clear these values -> means that track new data for exporting
-    ArrayList<String> beaconNameList;
-    ArrayList<Integer> rssiList;
-    ArrayList<Integer> kfRssiList;
-    ArrayList<String> mfRssiList;
-    ArrayList<String> mfkfRssiList;
-    ArrayList<String> timestampList;
+    ArrayList<String> beaconNameList1, beaconNameList2, beaconNameList3;
+    ArrayList<Integer> rssiList1, rssiList2, rssiList3;
+    ArrayList<String> mfRssiList1, mfRssiList2, mfRssiList3;
+    ArrayList<String> mfkfRssiList1, mfkfRssiList2, mfkfRssiList3;
+    ArrayList<String> timestampList1, timestampList2, timestampList3;
 
     //method to record down beacon name, rssi and timestamp into a csv file
-    public void recordToList (String beaconName, int rssi, int kfRssi, int mfRssi, int mfkfRssi) {
-        beaconNameList.add(beaconName);
-        rssiList.add(rssi);
-        kfRssiList.add(kfRssi);
+    //3 beacons data store same lists -> only differentiate into different files when exporting to csv file
+    public void recordToList (String beaconName, int rssi, int mfRssi, int mfkfRssi) {
 
-        if (mfRssi == 0) mfRssiList.add("");
-        else mfRssiList.add(Integer.toString(mfRssi));
+        if (beaconName.equals("Beacon1")) {
+            beaconNameList1.add(beaconName);
+            rssiList1.add(rssi);
 
-        if (mfkfRssi == 0) mfkfRssiList.add("");
-        else mfkfRssiList.add(Integer.toString(mfkfRssi));
+            if (mfRssi == 0) mfRssiList1.add("");
+            else mfRssiList1.add(Integer.toString(mfRssi));
 
-        long curTimeMillis = System.currentTimeMillis();
-        Date curDate = new Date(curTimeMillis);
-        String dateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
-        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.ENGLISH);
-        String formattedTimestamp = sdf.format(curDate);
-        timestampList.add(formattedTimestamp);
+            if (mfkfRssi == 0) mfkfRssiList1.add("");
+            else mfkfRssiList1.add(Integer.toString(mfkfRssi));
 
-        Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi + "; KF Rssi:" + kfRssi + "; MF Rssi: " + mfRssi + "; MFKF Rssi: " + mfkfRssi + "; Timestamp: " + formattedTimestamp);
+            long curTimeMillis = System.currentTimeMillis();
+            Date curDate = new Date(curTimeMillis);
+            String dateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
+            SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.ENGLISH);
+            String formattedTimestamp = sdf.format(curDate);
+            timestampList1.add(formattedTimestamp);
+
+            Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi +  "; MF Rssi: " + mfRssi + "; MFKF Rssi: " + mfkfRssi + "; Timestamp: " + formattedTimestamp);
+        }
+
+        if (beaconName.equals("Beacon2")) {
+            beaconNameList2.add(beaconName);
+            rssiList2.add(rssi);
+
+            if (mfRssi == 0) mfRssiList2.add("");
+            else mfRssiList2.add(Integer.toString(mfRssi));
+
+            if (mfkfRssi == 0) mfkfRssiList2.add("");
+            else mfkfRssiList2.add(Integer.toString(mfkfRssi));
+
+            long curTimeMillis = System.currentTimeMillis();
+            Date curDate = new Date(curTimeMillis);
+            String dateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
+            SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.ENGLISH);
+            String formattedTimestamp = sdf.format(curDate);
+            timestampList2.add(formattedTimestamp);
+
+            Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi +  "; MF Rssi: " + mfRssi + "; MFKF Rssi: " + mfkfRssi + "; Timestamp: " + formattedTimestamp);
+        }
+
+        if (beaconName.equals("Beacon3")) {
+            beaconNameList3.add(beaconName);
+            rssiList3.add(rssi);
+
+            if (mfRssi == 0) mfRssiList3.add("");
+            else mfRssiList3.add(Integer.toString(mfRssi));
+
+            if (mfkfRssi == 0) mfkfRssiList3.add("");
+            else mfkfRssiList3.add(Integer.toString(mfkfRssi));
+
+            long curTimeMillis = System.currentTimeMillis();
+            Date curDate = new Date(curTimeMillis);
+            String dateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
+            SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.ENGLISH);
+            String formattedTimestamp = sdf.format(curDate);
+            timestampList3.add(formattedTimestamp);
+
+            Log.i("Record to List", "Beacon: " + beaconName + "; RSSI: " + rssi +  "; MF Rssi: " + mfRssi + "; MFKF Rssi: " + mfkfRssi + "; Timestamp: " + formattedTimestamp);
+        }
     }
 
     //method to export the beacon names, rssi values and timestamp into csv file
-    //only runs after the alert dialog box appears for user to input file name
-    //after exporting, will still remain data for exporting again into different file name
-    public void exportToCSV (String dialogValue) {
+    //export to 3 different files for different beacon
+    public void exportToCSV () {
 
-        String fName = dialogValue;
-        String fileName = fName + ".csv";
+        String fileName1 = "beacon1.csv";
+        String fileName2 = "beacon2.csv";
+        String fileName3 = "beacon3.csv";
+
         String folderName = "myCSVFolder";
-        Log.i("fName", fName);
 
         if(isExternalStorageWritable()) {
 
+            //create folder for storing files
             File folder = new File(MainActivity.this.getExternalFilesDir(null), folderName);
-
             if(!folder.exists()) folder.mkdirs();
 
-            File csvFile = new File(folder, fileName);
+            //beacon 1 exporting
+            File file = new File(folder, fileName1);
             try {
-                FileWriter writer = new FileWriter(csvFile);
-                writer.write("Beacon,RSSI,KF Rssi,MF Rssi,MFKF Rssi,Timestamp\n");
+                FileWriter writer = new FileWriter(file);
+                writer.write("Beacon,RSSI,MF Rssi,MFKF Rssi,Timestamp\n");
 
-                for(int i = 0; i < beaconNameList.size(); i++) {
-                    String line = beaconNameList.get(i) + "," + rssiList.get(i) + "," + kfRssiList.get(i) + "," + mfRssiList.get(i) + "," + mfkfRssiList.get(i) + "," +  timestampList.get(i) + "\n";
+                for(int i = 0; i < beaconNameList1.size(); i++) {
+                    String line = beaconNameList1.get(i) + "," + rssiList1.get(i) +  "," + mfRssiList1.get(i) + "," + mfkfRssiList1.get(i) + "," +  timestampList1.get(i) + "\n";
                     writer.write(line);
                 }
 
                 writer.close();
-                Log.i("CSV writing", "CSV file written");
-                Toast toast = Toast.makeText(MainActivity.this, "CSV file exported", Toast.LENGTH_SHORT);
+                Log.i("CSV Beacon 1 writing", "CSV Beacon 1 file written");
+                Toast toast = Toast.makeText(MainActivity.this, "CSV for Beacon 1 file exported", Toast.LENGTH_SHORT);
+                toast.show();
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            //beacon 2 exporting
+            file = new File(folder, fileName2);
+            try {
+                FileWriter writer = new FileWriter(file);
+                writer.write("Beacon,RSSI,MF Rssi,MFKF Rssi,Timestamp\n");
+
+                for(int i = 0; i < beaconNameList2.size(); i++) {
+                    String line = beaconNameList2.get(i) + "," + rssiList2.get(i) +  "," + mfRssiList2.get(i) + "," + mfkfRssiList2.get(i) + "," +  timestampList2.get(i) + "\n";
+                    writer.write(line);
+                }
+
+                writer.close();
+                Log.i("CSV Beacon 2 writing", "CSV Beacon 2 file written");
+                Toast toast = Toast.makeText(MainActivity.this, "CSV for Beacon 2 file exported", Toast.LENGTH_SHORT);
+                toast.show();
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            //beacon 3 exporting
+            file = new File(folder, fileName3);
+            try {
+                FileWriter writer = new FileWriter(file);
+                writer.write("Beacon,RSSI,MF Rssi,MFKF Rssi,Timestamp\n");
+
+                for(int i = 0; i < beaconNameList3.size(); i++) {
+                    String line = beaconNameList3.get(i) + "," + rssiList3.get(i) +  "," + mfRssiList3.get(i) + "," + mfkfRssiList3.get(i) + "," +  timestampList3.get(i) + "\n";
+                    writer.write(line);
+                }
+
+                writer.close();
+                Log.i("CSV Beacon 3 writing", "CSV Beacon 3 file written");
+                Toast toast = Toast.makeText(MainActivity.this, "CSV for Beacon 3 file exported", Toast.LENGTH_SHORT);
                 toast.show();
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
-    }
-
-    //creates an alert dialog for user to input file name for csv file
-    //after prompting file name -> will proceed to next function to write data into csv file (either using default name or user input as file name)
-    EditText edittextinput;
-    public void promptInputFileName() {
-
-        AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this);
-
-        alert.setTitle("Enter File Name");
-        alert.setMessage("Enter name for your csv file");
-        edittextinput = new EditText(MainActivity.this);
-        alert.setView(edittextinput);
-
-        //if "submit", gets input from edittext and write data to csv file
-        alert.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                String value = edittextinput.getText().toString();
-                exportToCSV(value);
-                dialogInterface.cancel();
-            }
-        });
-
-        //if "use default naming", use default name for csv file and write data to it
-        alert.setNegativeButton("Use default naming", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                String value = "defaultdata";
-                exportToCSV(value);
-                dialogInterface.cancel();
-            }
-        });
-
-        AlertDialog alertDialog = alert.create();
-        alertDialog.show();
-
     }
 
     //change tracking status to enabled or disabled -- to enable the system to track the RSSI values for exporting later
@@ -385,7 +505,6 @@ public class MainActivity extends AppCompatActivity {
         avgrssi2=0;
         avgrssi3=0;
 
-        //
         if(rowCounter == 26) {
             Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
             Log.i("storeRSSI()", "All points logged");
@@ -436,7 +555,6 @@ public class MainActivity extends AppCompatActivity {
         private Context context;
         private ArrayList<BluetoothDevice> devices;
         private ArrayList<Integer> rssis;
-        private ArrayList<Integer> kfRssis;
         private ArrayList<Integer> mfkfRssis;
         private ArrayList<Integer> mfRssis;
 
@@ -445,16 +563,14 @@ public class MainActivity extends AppCompatActivity {
             this.context = context;
             devices = new ArrayList<>();
             rssis = new ArrayList<>();
-            kfRssis = new ArrayList<>();
             mfkfRssis = new ArrayList<>();
             mfRssis = new ArrayList<>();
         }
 
-        public void addDevice(BluetoothDevice device, int rssi, int kfRssi, int mfkfRssi, int mfRssi) {
+        public void addDevice(BluetoothDevice device, int rssi, int mfkfRssi, int mfRssi) {
             if(!devices.contains(device)) {
                 devices.add(device);
                 rssis.add(rssi);
-                kfRssis.add(kfRssi);
                 mfkfRssis.add(mfkfRssi);
                 mfRssis.add(mfRssi);
             }
@@ -463,7 +579,6 @@ public class MainActivity extends AppCompatActivity {
                 int position = devices.indexOf(device);
                 if (position != -1) {
                     rssis.set(position, rssi);
-                    kfRssis.set(position, kfRssi);
                     mfkfRssis.set(position, mfkfRssi);
                     mfRssis.set(position, mfRssi);
                 }
@@ -502,13 +617,11 @@ public class MainActivity extends AppCompatActivity {
 
             TextView tvDeviceName = view.findViewById(R.id.tvDeviceName);
             TextView tvDeviceRSSI = view.findViewById(R.id.tvDeviceRSSI);
-            TextView tvDeviceKFRssi = view.findViewById(R.id.tvDeviceKFRssi);
             TextView tvDeviceMFRssi = view.findViewById(R.id.tvDeviceMFRssi);
             TextView tvDeviceMFKFRssi = view.findViewById(R.id.tvDeviceMFKFRssi);
 
             tvDeviceName.setText(devices.get(pos).getName());
             tvDeviceRSSI.setText("Raw RSSI value: " + rssis.get(pos).toString() + "dbm");
-            tvDeviceKFRssi.setText("Kalman Filtered RSSI value: " + kfRssis.get(pos).toString() + "dbm");
             tvDeviceMFRssi.setText("Mean filtered RSSI value: " + mfRssis.get(pos).toString() + "dbm");
             tvDeviceMFKFRssi.setText("Mean & Kalman Filtered RSSI value: " + mfkfRssis.get(pos).toString() + "dbm");
 
@@ -525,22 +638,46 @@ public class MainActivity extends AppCompatActivity {
         toast.show();
 
         //creates a new kalman filter object each time start scanning
-        kfHelper = new KalmanFilterHelper();
-        kfHelper2 = new KalmanFilterHelper();
+        kfBeacon1 = new KalmanFilterHelper();
+        kfBeacon2 = new KalmanFilterHelper();
+        kfBeacon3 = new KalmanFilterHelper();
 
         //re-initialize all global variables
-        filteredRssis = new ArrayList<>();
-        meanKFRssis = new ArrayList<>();
-        inputCounter = 0;
-        totalInputVal = 0;
-        mean = 0;
-        finalmean = 0;
-        beaconNameList = new ArrayList<>();
-        rssiList = new ArrayList<>();
-        timestampList = new ArrayList<>();
-        mfkfRssiList = new ArrayList<>();
-        kfRssiList = new ArrayList<>();
-        mfRssiList = new ArrayList<>();
+        meanKFRssis1 = new ArrayList<>();
+        meanKFRssis2 = new ArrayList<>();
+        meanKFRssis3 = new ArrayList<>();
+
+        inputCounter1 = 0;
+        inputCounter2 = 0;
+        inputCounter3 = 0;
+
+        totalInputVal1 = 0;
+        totalInputVal2 = 0;
+        totalInputVal3 = 0;
+
+        finalmean1 = 0;
+        finalmean2 = 0;
+        finalmean3 = 0;
+
+        beaconNameList1 = new ArrayList<>();
+        beaconNameList2 = new ArrayList<>();
+        beaconNameList3 = new ArrayList<>();
+
+        rssiList1 = new ArrayList<>();
+        rssiList2 = new ArrayList<>();
+        rssiList3 = new ArrayList<>();
+
+        timestampList1 = new ArrayList<>();
+        timestampList2 = new ArrayList<>();
+        timestampList3 = new ArrayList<>();
+
+        mfkfRssiList1 = new ArrayList<>();
+        mfkfRssiList2 = new ArrayList<>();
+        mfkfRssiList3 = new ArrayList<>();
+
+        mfRssiList1 = new ArrayList<>();
+        mfRssiList2 = new ArrayList<>();
+        mfRssiList3 = new ArrayList<>();
 
         //preparing filters for scanning BLE signals
         List<ScanFilter> filters = null;
