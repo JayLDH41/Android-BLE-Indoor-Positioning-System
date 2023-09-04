@@ -69,8 +69,8 @@ public class MainActivity extends AppCompatActivity {
     Button btnTrackRss;
     DeviceListAdapter adapter;
     ListView lv;
-    Map<String, Integer> hm = new HashMap<String, Integer>();
-    DatabaseHandler handler = new DatabaseHandler(this);
+    Map<String, Integer> hm;
+    DatabaseHandler dbHandler = new DatabaseHandler(this);
 
     private String[] rowid = new String[]{};
     private int rowCounter = 1;
@@ -127,12 +127,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //click on this button to snapshot and store rssi value
-//        btnRecordRss.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                storeRSSI();
-//            }
-//        });
+        btnRecordRss.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                storeRSSI();
+            }
+        });
 
         //click on this button to start tracking rssi values for exporting them into csv file
         btnTrackRss.setOnClickListener(new View.OnClickListener() {
@@ -172,8 +172,6 @@ public class MainActivity extends AppCompatActivity {
             //performs mean & kalman filtering here
             //filtering is independent as they have their own distribution
             if (deviceName != null) {
-
-                Log.i("leScanCallback", "Device found! Device Name: " + deviceName + " " + "Device RSSI: " + rssi);
 
                 switch (deviceName) {
                     case "Beacon1": {
@@ -217,7 +215,8 @@ public class MainActivity extends AppCompatActivity {
                         if (trackRSSI == 1)
                             recordToList(deviceName, rssi, finalmean1, meanAndKFRssi);
 
-                        //adds smoothened value to hashmap
+                        //adds smoothened value to hashmap -- for storing values into database later
+                        if (meanAndKFRssi != 0) hm.put("Beacon1", meanAndKFRssi);
 
                         Log.i("Beacon1 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean1 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
                         break;
@@ -263,6 +262,9 @@ public class MainActivity extends AppCompatActivity {
                         if (trackRSSI == 1)
                             recordToList(deviceName, rssi, finalmean2, meanAndKFRssi);
 
+                        //stores latest final RSSI to hashmap for storing to database
+                        if (meanAndKFRssi != 0) hm.put("Beacon2", meanAndKFRssi);
+
                         Log.i("Beacon2 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean2 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
                         break;
                     }
@@ -306,6 +308,9 @@ public class MainActivity extends AppCompatActivity {
                         //if enabled tracking, record to list for exporting later
                         if (trackRSSI == 1)
                             recordToList(deviceName, rssi, finalmean3, meanAndKFRssi);
+
+                        //stores latest final RSSI to hashmap for storing to database
+                        if (meanAndKFRssi != 0) hm.put("Beacon3", meanAndKFRssi);
 
                         Log.i("Beacon3 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean3 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
                         break;
@@ -488,23 +493,21 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    int rssi1 = 0, rssi2 = 0, rssi3 = 0;
-    int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
 
     //method to store RSSI values from all 3 beacons into database
-    //but need to decide which to use
+    //if status == 1, calls the function to store smoothened RSSI values for this scancallback
+    //each point 60 inputs -> this function gets called 60 times, once reached 60, reset counter and all variable values
+    int storeStatus = 0;
+    int storeCounter = 0;
+    int totalrssi1 = 0, totalrssi2 = 0, totalrssi3 = 0;
+    int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
     public void storeRSSI() {
         Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + "logging", Toast.LENGTH_SHORT);
         toast1.show();
         Log.i("storeRSSI(): ", "running");
         Log.i("storeRSSI(): ", "Logging Point " + rowCounter);
-        rssi1=0;
-        rssi2=0;
-        rssi3=0;
-        avgrssi1=0;
-        avgrssi2=0;
-        avgrssi3=0;
 
+        //does not continue when reach point limit
         if(rowCounter == 26) {
             Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
             Log.i("storeRSSI()", "All points logged");
@@ -512,25 +515,36 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        final int delay = 2000;
-        final Handler eventHandler = new Handler();
+        //prepare Handler for running calculation and storing of RSSI values for the point
+        final Handler handler = new Handler();
+        final int delay = 1000;
+        handler.postDelayed(new Runnable() {
 
-        eventHandler.postDelayed(new Runnable() {
+            //aim: 60 counts, each count 1 second
             int count = 0;
             @Override
             public void run() {
-                rssi1 += hm.getOrDefault("Beacon1", 0);
-                rssi2 += hm.getOrDefault("Beacon2", 0);
-                rssi3 += hm.getOrDefault("Beacon3", 0);
-                Log.i("storeRSSI():",  "RSSI Logged " + count + " Values " + hm.getOrDefault("Beacon1", rssi1) + " " + hm.getOrDefault("Beacon2", rssi2) + " " + hm.getOrDefault("Beacon3", rssi3));
-                count++;
-                if(count < 10) eventHandler.postDelayed(this, delay);
-                if (count == 10) {
-                    avgrssi1 = rssi1/10;
-                    avgrssi2 = rssi2/10;
-                    avgrssi3 = rssi3/10;
 
-                    Log.i("storeRSSI()", "Total values of RSSI " + count + " Values " + rssi1 + " " + rssi2 + " " + rssi3);
+                //adds the latest MFKF RSSI values to totalrssi
+                totalrssi1 += hm.getOrDefault("Beacon1", 0);
+                totalrssi2 += hm.getOrDefault("Beacon2", 0);
+                totalrssi3 += hm.getOrDefault("Beacon3", 0);
+
+                Log.i("storeRSSI():",  "RSSI Logged " + count + " Values " + hm.getOrDefault("Beacon1", 0) + " " + hm.getOrDefault("Beacon2", 0) + " " + hm.getOrDefault("Beacon3", 0));
+                Log.d("Count " + count, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
+                count++;
+
+                //if haven't reached 60 seconds / entries, wait 1 second
+                if(count < 60) handler.postDelayed(this, delay);
+
+                //if reach 60 seconds / entries => calculate the average RSSI and store it into database
+                if (count == 60) {
+                    avgrssi1 = totalrssi1 / 60;
+                    avgrssi2 = totalrssi2 / 60;
+                    avgrssi3 = totalrssi3 / 60;
+
+                    Log.d("Total RSSI values for Point " + rowCounter, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
+                    Log.d("Avg RSSI values for Point " + rowCounter, avgrssi1 + " " + avgrssi2 + " " + avgrssi3);
 
                     Date date = new Date();
                     String dateFormat = "yyyy-MM-dd HH:mm:ss";
@@ -538,10 +552,7 @@ public class MainActivity extends AppCompatActivity {
                     String dateStr = sdf.format(date);
 
                     rowid = new String[] {Integer.toString(rowCounter)};
-
-                    Log.i("storeRSSI()", "Total values of RSSI " + count + " Values " + avgrssi1 + " " + avgrssi2 + " " + avgrssi3);
-
-                    handler.updateRows(rowid, avgrssi1, avgrssi2, avgrssi3, dateStr);
+                    dbHandler.updateRows(rowid, avgrssi1, avgrssi2, avgrssi3, dateStr);
 
                     Toast toast = Toast.makeText(MainActivity.this, "Point " + rowCounter + "loaded", Toast.LENGTH_SHORT);
                     toast.show();
@@ -550,6 +561,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }, delay);
     }
+
+
+
     //list adapter for displaying ble devices on list view
     public static class DeviceListAdapter extends BaseAdapter {
         private Context context;
@@ -678,6 +692,9 @@ public class MainActivity extends AppCompatActivity {
         mfRssiList1 = new ArrayList<>();
         mfRssiList2 = new ArrayList<>();
         mfRssiList3 = new ArrayList<>();
+
+        hm = new HashMap<String, Integer>();
+
 
         //preparing filters for scanning BLE signals
         List<ScanFilter> filters = null;
