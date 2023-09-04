@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,6 +79,7 @@ public class EstimateLocation extends AppCompatActivity {
         btnStopEst.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                stopScan();
                 finish();
             }
         });
@@ -94,18 +96,149 @@ public class EstimateLocation extends AppCompatActivity {
 
     //receives scan results and store into a hashmap
     HashMap<String, Integer> hm1 = new HashMap<>();
-    private final ScanCallback leScanCallback = new ScanCallback() {
+    KalmanFilterHelper kfBeacon1, kfBeacon2, kfBeacon3;
+    ArrayList<Integer> meanKFRssis1, meanKFRssis2, meanKFRssis3;
+    int inputCounter1, inputCounter2, inputCounter3;
+    int totalInputVal1, totalInputVal2, totalInputVal3;
+    int finalmean1, finalmean2, finalmean3;
+
+    private final ScanCallback leScanCallback = new  ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
 
-            //get information of bluetooth device and display current RSSI values to user
             BluetoothDevice device = result.getDevice();
             int rssi = result.getRssi();
             @SuppressLint("MissingPermission") String deviceName = device.getName();
-            hm1.put(deviceName, rssi);
+
+            //performs mean & kalman filtering here
+            //filtering is independent as they have their own distribution
             if (deviceName != null) {
-                tvCurRssi.setText("CURRENT RSSI VALUES: \nBeacon1: " + hm1.getOrDefault("Beacon1", 0) + "\nBeacon2: " + hm1.getOrDefault("Beacon2", 0) + "\nBeacon3: " + hm1.getOrDefault("Beacon3", 0));
+
+                switch (deviceName) {
+                    case "Beacon1": {
+                        int meanAndKFRssi = 0;
+                        int mean;
+                        finalmean1 = 0;
+
+                        totalInputVal1 += rssi;
+                        inputCounter1++;
+
+                        if (inputCounter1 == 10) {
+
+                            //mean filtering on RSSI Beacon 1
+                            mean = totalInputVal1 / inputCounter1;
+                            finalmean1 = mean;
+
+                            //kalman filtering on mean RSSI Beacon 1
+
+                            //1st time: create a new state for kalman filter
+                            if (meanKFRssis1.isEmpty()) {
+                                meanAndKFRssi = kfBeacon1.smoothenRssiFirstTime(rssi);
+                                meanKFRssis1.add(meanAndKFRssi);
+                            }
+
+                            //not 1st time: use current state from particular kalman filter
+                            else {
+                                meanAndKFRssi = kfBeacon1.smoothenRssi(rssi);
+                                meanKFRssis1.add(meanAndKFRssi);
+                            }
+
+                            //adds smoothened value to hashmap
+                            hm1.put("Beacon1", meanAndKFRssi);
+
+                            //resets all variables for next calculation
+                            totalInputVal1 = 0;
+                            inputCounter1 = 0;
+                        }
+
+                        Log.i("Beacon1 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean1 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
+                        break;
+                    }
+                    case "Beacon2": {
+                        int meanAndKFRssi = 0;
+                        int mean;
+                        finalmean2 = 0;
+
+                        totalInputVal2 += rssi;
+                        inputCounter2++;
+
+                        if (inputCounter2 == 10) {
+
+                            //mean filtering on RSSI Beacon 1
+                            mean = totalInputVal2 / inputCounter2;
+                            finalmean2 = mean;
+
+                            //kalman filtering on mean RSSI Beacon 1
+
+                            //1st time: create a new state for kalman filter
+                            if (meanKFRssis2.isEmpty()) {
+                                meanAndKFRssi = kfBeacon2.smoothenRssiFirstTime(rssi);
+                                meanKFRssis2.add(meanAndKFRssi);
+                            }
+
+                            //not 1st time: use current state from particular kalman filter
+                            else {
+                                meanAndKFRssi = kfBeacon2.smoothenRssi(rssi);
+                                meanKFRssis2.add(meanAndKFRssi);
+                            }
+
+                            //adds smoothened value to hashmap
+                            hm1.put("Beacon2", meanAndKFRssi);
+
+                            //resets all variables for next calculation
+                            totalInputVal2 = 0;
+                            inputCounter2 = 0;
+                        }
+
+                        Log.i("Beacon2 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean2 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
+                        break;
+                    }
+                    case "Beacon3": {
+                        int meanAndKFRssi = 0;
+                        int mean;
+                        finalmean3 = 0;
+
+                        totalInputVal3 += rssi;
+                        inputCounter3++;
+
+                        if (inputCounter3 == 10) {
+
+                            //mean filtering on RSSI Beacon 1
+                            mean = totalInputVal3 / inputCounter3;
+                            finalmean3 = mean;
+
+                            //kalman filtering on mean RSSI Beacon 1
+
+                            //1st time: create a new state for kalman filter
+                            if (meanKFRssis3.isEmpty()) {
+                                meanAndKFRssi = kfBeacon3.smoothenRssiFirstTime(rssi);
+                                meanKFRssis3.add(meanAndKFRssi);
+                            }
+
+                            //not 1st time: use current state from particular kalman filter
+                            else {
+                                meanAndKFRssi = kfBeacon3.smoothenRssi(rssi);
+                                meanKFRssis3.add(meanAndKFRssi);
+                            }
+
+                            //adds smoothened value to hashmap
+                            hm1.put("Beacon3", meanAndKFRssi);
+
+                            //resets all variables for next calculation
+                            totalInputVal3 = 0;
+                            inputCounter3 = 0;
+                        }
+
+                        Log.i("Beacon3 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean3 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
+                        break;
+                    }
+                    default:
+                        Toast toast = Toast.makeText(EstimateLocation.this, "Scanned device is not one of the beacons", Toast.LENGTH_SHORT);
+                        toast.show();
+                        break;
+                }
+                    tvCurRssi.setText("CURRENT RSSI VALUES: \nBeacon1: " + hm1.getOrDefault("Beacon1", 0) + "\nBeacon2: " + hm1.getOrDefault("Beacon2", 0) + "\nBeacon3: " + hm1.getOrDefault("Beacon3", 0));
             }
         }
     };
@@ -216,6 +349,28 @@ public class EstimateLocation extends AppCompatActivity {
     private void startScan() {
         Log.i("startScan()", "Start scanning for BLE signals");
 
+        //creates a new kalman filter object each time start scanning
+        kfBeacon1 = new KalmanFilterHelper();
+        kfBeacon2 = new KalmanFilterHelper();
+        kfBeacon3 = new KalmanFilterHelper();
+
+        //re-initialize all global variables
+        meanKFRssis1 = new ArrayList<>();
+        meanKFRssis2 = new ArrayList<>();
+        meanKFRssis3 = new ArrayList<>();
+
+        inputCounter1 = 0;
+        inputCounter2 = 0;
+        inputCounter3 = 0;
+
+        totalInputVal1 = 0;
+        totalInputVal2 = 0;
+        totalInputVal3 = 0;
+
+        finalmean1 = 0;
+        finalmean2 = 0;
+        finalmean3 = 0;
+
         List<ScanFilter> filters = null;
         filters = new ArrayList<>();
 
@@ -241,6 +396,16 @@ public class EstimateLocation extends AppCompatActivity {
                 Log.v("startScanning", e.toString());
             }
         });
+    }
+
+    //stop scanning
+    @SuppressLint("MissingPermission")
+    public void stopScan() {
+
+        Log.i("BLE Scanner: ", "Stop Scanning");
+        Toast toast = Toast.makeText(this, "Stop scanning",Toast.LENGTH_SHORT);
+        toast.show();
+        btScanner.stopScan(leScanCallback);
     }
 
     //check permissions
