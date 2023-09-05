@@ -1,15 +1,19 @@
 package my.edu.utar.fyp;
 
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -28,7 +32,39 @@ public class DatabasePage extends AppCompatActivity {
         adapter = new DatabasePage.DeviceListAdapter(this);
         lv.setAdapter(adapter);
 
+        Button btnClearDatabase = findViewById(R.id.btnClearDatabase);
         DatabaseHandler dbHandler = new DatabaseHandler(this);
+
+        btnClearDatabase.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(DatabasePage.this);
+                builder.setMessage("Do you want to clear the database?");
+                builder.setTitle("ALERT");
+                builder.setCancelable(false);
+
+                builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dbHandler.clearDatabase();
+                        Toast toast = Toast.makeText(DatabasePage.this, "Database cleared", Toast.LENGTH_SHORT);
+                        toast.show();
+                        finish();
+                    }
+                });
+
+                builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.cancel();
+                    }
+                });
+
+                AlertDialog alertDialog = builder.create();
+                alertDialog.show();
+            }
+        });
+
         int dbSize = dbHandler.getRowCount();
         for(int i=1; i<=dbSize; i++) {
             String text = dbHandler.getRecordStr(new String[] {Integer.toString(i)});

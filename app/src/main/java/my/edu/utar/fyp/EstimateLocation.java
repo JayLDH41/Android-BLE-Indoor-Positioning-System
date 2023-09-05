@@ -246,7 +246,7 @@ public class EstimateLocation extends AppCompatActivity {
     //start estimation
     public void startEstimation() {
 
-        //get latest rssi values
+        //get latest rssi values (MFKF)
         int r1 = hm1.getOrDefault("Beacon1", 0);
         int r2 = hm1.getOrDefault("Beacon2", 0);
         int r3 = hm1.getOrDefault("Beacon3", 0);
@@ -306,38 +306,38 @@ public class EstimateLocation extends AppCompatActivity {
                     indexList.add(entry.getKey());
 
 
-        //get the coordinates from these indexes
-        float[] coor1, coor2, coor3;
-        DatabaseHandler db = new DatabaseHandler(EstimateLocation.this);
-        int rownum;
-        rownum = indexList.get(0) + 1 ;
-        String row1 = Integer.toString(rownum);
-        coor1 = db.getCoordinates(new String[] {row1});
-
-        rownum = indexList.get(1) + 1;
-        String row2 = Integer.toString(rownum);
-        coor2 = db.getCoordinates(new String[] {row2});
-
-        rownum = indexList.get(2) + 1;
-        String row3 = Integer.toString(rownum);
-        coor3 = db.getCoordinates(new String[] {row3});
-
-        Log.d("1st coordinates", coor1[0] + " " + coor1[1]);
-        Log.d("2nd coordinates", coor2[0] + " " + coor2[1]);
-        Log.d("3rd coordinates", coor3[0] + " " + coor3[1]);
-
-
-        //estimate final coordinates of user
-        double estX, estY, totalWeight;
-        totalWeight = sortedDistances.get(0) + sortedDistances.get(1) + sortedDistances.get(2);
-        estX = coor1[0] * ((1/sortedDistances.get(0)) + coor2[0] * (1/sortedDistances.get(1)) + coor3[0] * (1/sortedDistances.get(2))) / totalWeight;
-        estY = coor1[1] * ((1/sortedDistances.get(0)) + coor2[1] * (1/sortedDistances.get(1)) + coor3[1] * (1/sortedDistances.get(2))) / totalWeight;
+//        //get the coordinates from these indexes
+//        float[] coor1, coor2, coor3;
+//        DatabaseHandler db = new DatabaseHandler(EstimateLocation.this);
+//        int rownum;
+//        rownum = indexList.get(0) + 1 ;
+//        String row1 = Integer.toString(rownum);
+//        coor1 = db.getCoordinates(new String[] {row1});
+//
+//        rownum = indexList.get(1) + 1;
+//        String row2 = Integer.toString(rownum);
+//        coor2 = db.getCoordinates(new String[] {row2});
+//
+//        rownum = indexList.get(2) + 1;
+//        String row3 = Integer.toString(rownum);
+//        coor3 = db.getCoordinates(new String[] {row3});
+//
+//        Log.d("1st coordinates", coor1[0] + " " + coor1[1]);
+//        Log.d("2nd coordinates", coor2[0] + " " + coor2[1]);
+//        Log.d("3rd coordinates", coor3[0] + " " + coor3[1]);
+//
+//
+//        //estimate final coordinates of user
+//        double estX, estY, totalWeight;
+//        totalWeight = sortedDistances.get(0) + sortedDistances.get(1) + sortedDistances.get(2);
+//        estX = coor1[0] * ((1/sortedDistances.get(0)) + coor2[0] * (1/sortedDistances.get(1)) + coor3[0] * (1/sortedDistances.get(2))) / totalWeight;
+//        estY = coor1[1] * ((1/sortedDistances.get(0)) + coor2[1] * (1/sortedDistances.get(1)) + coor3[1] * (1/sortedDistances.get(2))) / totalWeight;
 
         Log.d("K nearest neighbours", indexList.toString());
-        Log.d("estimated coordinates", estX + ", " +estY);
+//        Log.d("estimated coordinates", estX + ", " +estY);
 
         tvKNearestRefPt.setText("3 nearest neighbour point: " + indexList.toString());
-        tvEstLocation.setText("Estimated Location: (" + estX + ", " + estY + ")");
+//        tvEstLocation.setText("Estimated Location: (" + estX + ", " + estY + ")");
 
     }
 

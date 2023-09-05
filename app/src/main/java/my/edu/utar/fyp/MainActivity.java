@@ -493,29 +493,33 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
     //method to store RSSI values from all 3 beacons into database
-    //if status == 1, calls the function to store smoothened RSSI values for this scancallback
-    //each point 60 inputs -> this function gets called 60 times, once reached 60, reset counter and all variable values
-    int storeStatus = 0;
-    int storeCounter = 0;
     int totalrssi1 = 0, totalrssi2 = 0, totalrssi3 = 0;
     int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
     public void storeRSSI() {
-        Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + "logging", Toast.LENGTH_SHORT);
+        Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + " logging", Toast.LENGTH_SHORT);
         toast1.show();
-        Log.i("storeRSSI(): ", "running");
-        Log.i("storeRSSI(): ", "Logging Point " + rowCounter);
+        //Log.i("storeRSSI(): ", "running");
+        //Log.i("storeRSSI(): ", "Logging Point " + rowCounter);
 
-        //does not continue when reach point limit
-        if(rowCounter == 26) {
-            Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
-            Log.i("storeRSSI()", "All points logged");
-            toast.show();
-            return;
-        }
+        //resets all variables when the store button rssi is clicked
+        avgrssi1 = 0;
+        avgrssi2 = 0;
+        avgrssi3 = 0;
+        totalrssi1 = 0;
+        totalrssi2 = 0;
+        totalrssi3 = 0;
+
+//        //does not continue when reach point limit
+//        if(rowCounter == 26) {
+//            Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
+//            //Log.i("storeRSSI()", "All points logged");
+//            toast.show();
+//            return;
+//        }
 
         //prepare Handler for running calculation and storing of RSSI values for the point
+        //here takes up to 60 seconds to collect MFKF RSSI values -> calculate average -> store into DB
         final Handler handler = new Handler();
         final int delay = 1000;
         handler.postDelayed(new Runnable() {
@@ -530,8 +534,8 @@ public class MainActivity extends AppCompatActivity {
                 totalrssi2 += hm.getOrDefault("Beacon2", 0);
                 totalrssi3 += hm.getOrDefault("Beacon3", 0);
 
-                Log.i("storeRSSI():",  "RSSI Logged " + count + " Values " + hm.getOrDefault("Beacon1", 0) + " " + hm.getOrDefault("Beacon2", 0) + " " + hm.getOrDefault("Beacon3", 0));
-                Log.d("Count " + count, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
+                //Log.i("storeRSSI():",  "RSSI Logged " + count + " Values " + hm.getOrDefault("Beacon1", 0) + " " + hm.getOrDefault("Beacon2", 0) + " " + hm.getOrDefault("Beacon3", 0));
+                //Log.d("Count " + count, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
                 count++;
 
                 //if haven't reached 60 seconds / entries, wait 1 second
@@ -543,20 +547,23 @@ public class MainActivity extends AppCompatActivity {
                     avgrssi2 = totalrssi2 / 60;
                     avgrssi3 = totalrssi3 / 60;
 
-                    Log.d("Total RSSI values for Point " + rowCounter, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
-                    Log.d("Avg RSSI values for Point " + rowCounter, avgrssi1 + " " + avgrssi2 + " " + avgrssi3);
+                    //Log.d("Total RSSI values for Point " + rowCounter, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
+                    //Log.d("Avg RSSI values for Point " + rowCounter, avgrssi1 + " " + avgrssi2 + " " + avgrssi3);
 
                     Date date = new Date();
                     String dateFormat = "yyyy-MM-dd HH:mm:ss";
                     SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
                     String dateStr = sdf.format(date);
 
+                    //stores row into database
                     rowid = new String[] {Integer.toString(rowCounter)};
-                    dbHandler.updateRows(rowid, avgrssi1, avgrssi2, avgrssi3, dateStr);
+                    dbHandler.addRow(avgrssi1, avgrssi2, avgrssi3);
 
-                    Toast toast = Toast.makeText(MainActivity.this, "Point " + rowCounter + "loaded", Toast.LENGTH_SHORT);
+                    Toast toast = Toast.makeText(MainActivity.this, "Point " + rowCounter + " loaded", Toast.LENGTH_SHORT);
                     toast.show();
                     rowCounter++;
+
+                    //no need to consider resetting variables here as I set it to reset whenever user clicks the store rssi button
                 }
             }
         }, delay);

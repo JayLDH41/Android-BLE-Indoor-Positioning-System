@@ -7,6 +7,12 @@
     android:orientation="vertical"
     tools:context=".DatabasePage">
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/btnClearDatabase"
+        android:text="Clear Database Records"/>
+
     <ListView
         android:id="@+id/lvDatabaseResults"
         android:layout_height="match_parent"
