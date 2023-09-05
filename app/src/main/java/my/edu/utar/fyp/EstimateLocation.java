@@ -144,7 +144,7 @@ public class EstimateLocation extends AppCompatActivity {
                                 meanKFRssis1.add(meanAndKFRssi);
                             }
 
-                            //adds smoothened value to hashmap
+                            //adds smoothened value to hashmap -- used as current RSSI snapshot for online phase
                             hm1.put("Beacon1", meanAndKFRssi);
 
                             //resets all variables for next calculation
@@ -183,7 +183,7 @@ public class EstimateLocation extends AppCompatActivity {
                                 meanKFRssis2.add(meanAndKFRssi);
                             }
 
-                            //adds smoothened value to hashmap
+                            //adds smoothened value to hashmap -- used as current RSSI snapshot for online phase
                             hm1.put("Beacon2", meanAndKFRssi);
 
                             //resets all variables for next calculation
@@ -222,7 +222,7 @@ public class EstimateLocation extends AppCompatActivity {
                                 meanKFRssis3.add(meanAndKFRssi);
                             }
 
-                            //adds smoothened value to hashmap
+                            //adds smoothened value to hashmap -- used as current RSSI snapshot for online phase
                             hm1.put("Beacon3", meanAndKFRssi);
 
                             //resets all variables for next calculation
@@ -251,14 +251,11 @@ public class EstimateLocation extends AppCompatActivity {
         int r2 = hm1.getOrDefault("Beacon2", 0);
         int r3 = hm1.getOrDefault("Beacon3", 0);
 
-
         //current rssi screenshot
         double[] arrCurRssi = new double[] {r1, r2, r3};
         Log.d("current rssi", arrCurRssi[0] + " " + arrCurRssi[1] + " " + arrCurRssi[2]);
 
-
         //get offline rssis as array
-        //[25][3]
         DatabaseHandler handler = new DatabaseHandler(this);
         double[][] offlineDataset = handler.getRssiArray();
         for (int i = 0; i < offlineDataset.length; i++)
@@ -268,19 +265,17 @@ public class EstimateLocation extends AppCompatActivity {
 
         //now has int[] online and int[][] offline
         //use euclidean distance to calculate distance between online and offline rssi values
-        //on_off_distances[0-24]
         ArrayList<Double> on_off_distances = new ArrayList<Double> ();
         for(double[] offlineRow : offlineDataset) {
             EuclideanDistance formula = new EuclideanDistance();
             on_off_distances.add(formula.compute(arrCurRssi, offlineRow));
         }
 
-
         //now we have the result euclidean distance between each offline rssis and online rssi
         //store index : distance into a hashmap to later labeling
-        //hmLabel range [0,24]
+        //hmLabel range depends on size of on_off_distances
         HashMap<Integer, Double> hmLabel = new HashMap<>();
-        for(int i=0; i<25; i++) {
+        for(int i=0; i<on_off_distances.size(); i++) {
                 hmLabel.put(i, on_off_distances.get(i));
             }
         Log.d("Index:Distance HM Result", hmLabel.toString());
@@ -305,43 +300,11 @@ public class EstimateLocation extends AppCompatActivity {
                 if(entry.getValue() == sortedDistances.get(i))
                     indexList.add(entry.getKey());
 
-
-//        //get the coordinates from these indexes
-//        float[] coor1, coor2, coor3;
-//        DatabaseHandler db = new DatabaseHandler(EstimateLocation.this);
-//        int rownum;
-//        rownum = indexList.get(0) + 1 ;
-//        String row1 = Integer.toString(rownum);
-//        coor1 = db.getCoordinates(new String[] {row1});
-//
-//        rownum = indexList.get(1) + 1;
-//        String row2 = Integer.toString(rownum);
-//        coor2 = db.getCoordinates(new String[] {row2});
-//
-//        rownum = indexList.get(2) + 1;
-//        String row3 = Integer.toString(rownum);
-//        coor3 = db.getCoordinates(new String[] {row3});
-//
-//        Log.d("1st coordinates", coor1[0] + " " + coor1[1]);
-//        Log.d("2nd coordinates", coor2[0] + " " + coor2[1]);
-//        Log.d("3rd coordinates", coor3[0] + " " + coor3[1]);
-//
-//
-//        //estimate final coordinates of user
-//        double estX, estY, totalWeight;
-//        totalWeight = sortedDistances.get(0) + sortedDistances.get(1) + sortedDistances.get(2);
-//        estX = coor1[0] * ((1/sortedDistances.get(0)) + coor2[0] * (1/sortedDistances.get(1)) + coor3[0] * (1/sortedDistances.get(2))) / totalWeight;
-//        estY = coor1[1] * ((1/sortedDistances.get(0)) + coor2[1] * (1/sortedDistances.get(1)) + coor3[1] * (1/sortedDistances.get(2))) / totalWeight;
-
+        //displays the K nearest points from current location
         Log.d("K nearest neighbours", indexList.toString());
-//        Log.d("estimated coordinates", estX + ", " +estY);
-
         tvKNearestRefPt.setText("3 nearest neighbour point: " + indexList.toString());
-//        tvEstLocation.setText("Estimated Location: (" + estX + ", " + estY + ")");
 
     }
-
-
 
     private final String[] deviceMAC = new String[] {"C4:F2:E9:8B:3F:22", "D0:2A:EE:E2:AB:CE", "EB:7A:2E:78:8E:21"};
 
