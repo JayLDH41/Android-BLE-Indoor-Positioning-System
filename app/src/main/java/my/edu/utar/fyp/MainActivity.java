@@ -218,7 +218,6 @@ public class MainActivity extends AppCompatActivity {
                         //adds smoothened value to hashmap -- for storing values into database later
                         if (meanAndKFRssi != 0) hm.put("Beacon1", meanAndKFRssi);
 
-                        Log.i("Beacon1 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean1 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
                         break;
                     }
                     case "Beacon2": {
@@ -265,7 +264,6 @@ public class MainActivity extends AppCompatActivity {
                         //stores latest final RSSI to hashmap for storing to database
                         if (meanAndKFRssi != 0) hm.put("Beacon2", meanAndKFRssi);
 
-                        Log.i("Beacon2 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean2 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
                         break;
                     }
                     case "Beacon3": {
@@ -311,8 +309,6 @@ public class MainActivity extends AppCompatActivity {
 
                         //stores latest final RSSI to hashmap for storing to database
                         if (meanAndKFRssi != 0) hm.put("Beacon3", meanAndKFRssi);
-
-                        Log.i("Beacon3 found! Processing...", "Device name: " + deviceName + " " + "Device RSSI: " + rssi + " " + "Mean RSSI: " + finalmean3 + " " + "MFKF Filtered RSSI: " + meanAndKFRssi);
                         break;
                     }
                     default:
@@ -513,14 +509,6 @@ public class MainActivity extends AppCompatActivity {
         xcoor = 0;
         ycoor = 0;
 
-//        //does not continue when reach point limit
-//        if(rowCounter == 26) {
-//            Toast toast = Toast.makeText(MainActivity.this, "All 25 rows recorded!", Toast.LENGTH_SHORT);
-//            //Log.i("storeRSSI()", "All points logged");
-//            toast.show();
-//            return;
-//        }
-
         //prepare Handler for running calculation and storing of RSSI values for the point
         //here takes up to 60 seconds to collect MFKF RSSI values -> calculate average -> store into DB
         final Handler handler = new Handler();
@@ -544,6 +532,8 @@ public class MainActivity extends AppCompatActivity {
                 //if haven't reached 60 seconds / entries, wait 1 second
                 if(count < 60) handler.postDelayed(this, delay);
 
+                // ================================================== Calculate Avg MFKF RSSI & Store it ==================================================
+
                 //if reach 60 seconds / entries => calculate the average RSSI and store it into database
                 if (count == 60) {
                     avgrssi1 = totalrssi1 / 60;
@@ -557,6 +547,8 @@ public class MainActivity extends AppCompatActivity {
                     String dateFormat = "yyyy-MM-dd HH:mm:ss";
                     SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
                     String dateStr = sdf.format(date);
+
+                    // ================================================== Prompt X Y Coordinates from user ==================================================
 
                     //use alert dialog to prompt user to input X Y coordinates of current point for storing
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -707,10 +699,6 @@ public class MainActivity extends AppCompatActivity {
     //start scanning for signals - only get the RSSI from the 3 beacons
     //resets all global variables before starting as this is the first function to be called -> if not will use previous data for next scanning activity
     public void startScan() {
-        Log.i("startScan()", "Start scanning for BLE signals");
-        Toast toast = Toast.makeText(this, "Start scanning for BLE signals",Toast.LENGTH_SHORT);
-        toast.show();
-
         //creates a new kalman filter object each time start scanning
         kfBeacon1 = new KalmanFilterHelper();
         kfBeacon2 = new KalmanFilterHelper();
@@ -754,7 +742,6 @@ public class MainActivity extends AppCompatActivity {
         mfRssiList3 = new ArrayList<>();
 
         hm = new HashMap<String, Integer>();
-
 
         //preparing filters for scanning BLE signals
         List<ScanFilter> filters = null;
