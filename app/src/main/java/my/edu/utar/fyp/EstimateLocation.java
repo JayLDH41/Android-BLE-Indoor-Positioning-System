@@ -304,6 +304,8 @@ public class EstimateLocation extends AppCompatActivity {
         Log.d("K nearest neighbours", indexList.toString());
         tvKNearestRefPt.setText("3 nearest neighbour point: " + indexList.toString());
 
+        //estimate current position of user using the coordinates of the K nearest points
+
     }
 
     private final String[] deviceMAC = new String[] {"C4:F2:E9:8B:3F:22", "D0:2A:EE:E2:AB:CE", "EB:7A:2E:78:8E:21"};

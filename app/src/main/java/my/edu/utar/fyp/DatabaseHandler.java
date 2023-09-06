@@ -22,8 +22,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private static final String key_beacon2 = "Beacon_2";
     private static final String key_beacon3 = "Beacon_3";
     private static final String key_timestamp = "Timestamp";
-//    private static final String key_x_coord = "X_Coordinate";
-//    private static final String key_y_coord = "Y_Coordinate";
+    private static final String key_x_coord = "X_Coordinate";
+    private static final String key_y_coord = "Y_Coordinate";
     private static final String table_name = "Fingerprint_RSSI";
 
     //returns all rssi values in array format
@@ -54,30 +54,30 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return arrRssi;
     }
 
-    //returns coordinates given the point number
-//    public float[] getCoordinates(String[] rowId) {
-//        SQLiteDatabase db = getWritableDatabase();
-//        String[] columns = new String[] {"rowid", key_x_coord, key_y_coord};
-//        String whereClause = "rowid=?";
-//        Cursor cursor = db.query(table_name, columns, whereClause, rowId, null, null, null);
-//
-//        int xcoorIndex = cursor.getColumnIndex(key_x_coord);
-//        int ycoorIndex = cursor.getColumnIndex(key_y_coord);
-//        float[] coordinates = new float[0];
-//
-//        if(cursor.moveToFirst()) {
-//            float xcoor = cursor.getFloat(xcoorIndex);
-//            float ycoor = cursor.getFloat(ycoorIndex);
-//            coordinates = new float[] {xcoor, ycoor};
-//        }
-//
-//        return coordinates;
-//    }
+//    returns coordinates given the point number
+    public float[] getCoordinates(String[] rowId) {
+        SQLiteDatabase db = getWritableDatabase();
+        String[] columns = new String[] {"rowid", key_x_coord, key_y_coord};
+        String whereClause = "rowid=?";
+        Cursor cursor = db.query(table_name, columns, whereClause, rowId, null, null, null);
+
+        int xcoorIndex = cursor.getColumnIndex(key_x_coord);
+        int ycoorIndex = cursor.getColumnIndex(key_y_coord);
+        float[] coordinates = new float[0];
+
+        if(cursor.moveToFirst()) {
+            float xcoor = cursor.getFloat(xcoorIndex);
+            float ycoor = cursor.getFloat(ycoorIndex);
+            coordinates = new float[] {xcoor, ycoor};
+        }
+
+        return coordinates;
+    }
     
     //returns information of the specific row
     public String getRecordStr(String[] rowId) {
         SQLiteDatabase db = getWritableDatabase();
-        String[] columns = new String[] {"rowid", key_beacon1, key_beacon2, key_beacon3, key_timestamp};
+        String[] columns = new String[] {"rowid", key_beacon1, key_beacon2, key_beacon3, key_x_coord, key_y_coord, key_timestamp};
         String whereClause = "rowid=?";
         Cursor cursor = db.query(table_name, columns, whereClause, rowId, null, null, null);
 
@@ -85,6 +85,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         int rssi1Index = cursor.getColumnIndex(key_beacon1);
         int rssi2Index = cursor.getColumnIndex(key_beacon2);
         int rssi3Index = cursor.getColumnIndex(key_beacon3);
+        int xcoorIndex = cursor.getColumnIndex(key_x_coord);
+        int ycoorIndex = cursor.getColumnIndex(key_y_coord);
         int timestampIndex = cursor.getColumnIndex(key_timestamp);
 
         if(cursor.moveToFirst()) {
@@ -92,12 +94,16 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             int rssi1 = cursor.getInt(rssi1Index);
             int rssi2 = cursor.getInt(rssi2Index);
             int rssi3 = cursor.getInt(rssi3Index);
+            float xcoor = cursor.getFloat(xcoorIndex);
+            float ycoor = cursor.getFloat(ycoorIndex);
             String timestamp = cursor.getString(timestampIndex);
 
             String result = "Row ID: " + rowid +
                     "\nBeacon 1 RSSI: " + rssi1 +
                     "\nBeacon 2 RSSI: " + rssi2 +
                     "\nBeacon 3 RSSI: " + rssi3 +
+                    "\n X: " + xcoor +
+                    "\n Y: " + ycoor +
                     "\nTimestamp: " + timestamp;
 
             return result;
@@ -133,7 +139,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     //adds new row to the database - each row is a reference point, with rssi values of 3 beacons and timestamp
-    public void addRow(int rssi1, int rssi2, int rssi3) {
+    public void addRow(float xcoor, float ycoor, int rssi1, int rssi2, int rssi3) {
 
         SQLiteDatabase db = getWritableDatabase();
         Date date = new Date();
@@ -145,6 +151,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         cv.put(key_beacon1, rssi1);
         cv.put(key_beacon2, rssi2);
         cv.put(key_beacon3, rssi3);
+        cv.put(key_x_coord, xcoor);
+        cv.put(key_y_coord, ycoor);
         cv.put(key_timestamp, dateStr);
 
         db.insert(table_name, null, cv);
@@ -170,6 +178,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 key_beacon1 + " INTEGER, " +
                 key_beacon2 + " INTEGER, " +
                 key_beacon3 + " INTEGER, " +
+                key_x_coord + " FLOAT, " +
+                key_y_coord + " FLOAT, " +
                 key_timestamp +" TEXT);");
 
 //        for (float x=0; x <= 210; x+=52.5) {

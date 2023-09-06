@@ -496,6 +496,7 @@ public class MainActivity extends AppCompatActivity {
     //method to store RSSI values from all 3 beacons into database
     int totalrssi1 = 0, totalrssi2 = 0, totalrssi3 = 0;
     int avgrssi1 = 0, avgrssi2 = 0, avgrssi3 = 0;
+    float xcoor, ycoor;
     public void storeRSSI() {
         Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + " logging", Toast.LENGTH_SHORT);
         toast1.show();
@@ -509,6 +510,8 @@ public class MainActivity extends AppCompatActivity {
         totalrssi1 = 0;
         totalrssi2 = 0;
         totalrssi3 = 0;
+        xcoor = 0;
+        ycoor = 0;
 
 //        //does not continue when reach point limit
 //        if(rowCounter == 26) {
@@ -555,13 +558,63 @@ public class MainActivity extends AppCompatActivity {
                     SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
                     String dateStr = sdf.format(date);
 
-                    //stores row into database
-                    rowid = new String[] {Integer.toString(rowCounter)};
-                    dbHandler.addRow(avgrssi1, avgrssi2, avgrssi3);
+                    //use alert dialog to prompt user to input X Y coordinates of current point for storing
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    final EditText input = new EditText(MainActivity.this);
 
-                    Toast toast = Toast.makeText(MainActivity.this, "Point " + rowCounter + " loaded", Toast.LENGTH_SHORT);
-                    toast.show();
-                    rowCounter++;
+                    builder.setView(input);
+                    builder.setMessage("Enter X coordinate for this point");
+                    builder.setTitle("Logging Point Coordinates");
+                    builder.setCancelable(false);
+
+                    builder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            String s = input.getText().toString();
+                            xcoor = Float.parseFloat(s);
+                            Toast toast = Toast.makeText(MainActivity.this, "X coordinate logged", Toast.LENGTH_SHORT);
+                            toast.show();
+
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                            builder = new AlertDialog.Builder(MainActivity.this);
+                            final EditText input2 = new EditText(MainActivity.this);
+
+                            builder.setView(input2);
+                            builder.setMessage("Enter Y Coordinate for this point");
+                            builder.setTitle("Logging Point Coordinates");
+                            builder.setCancelable(false);
+
+                            builder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    String s = input2.getText().toString();
+                                    ycoor = Float.parseFloat(s);
+                                    Toast  toast = Toast.makeText(MainActivity.this, "Y Coordinate logged", Toast.LENGTH_SHORT);
+                                    toast.show();
+
+                                    Log.d("X Y coordinates", xcoor + ", " + ycoor);
+
+                                    //stores row into database
+                                    rowid = new String[] {Integer.toString(rowCounter)};
+                                    dbHandler.addRow(xcoor, ycoor, avgrssi1, avgrssi2, avgrssi3);
+
+                                    Toast toast1 = Toast.makeText(MainActivity.this, "Point " + rowCounter + " loaded", Toast.LENGTH_SHORT);
+                                    toast1.show();
+                                    rowCounter++;
+                                }
+                            });
+                            builder.show();
+                        }
+                    });
+
+                    builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.cancel();
+                        }
+                    });
+
+                    builder.show();
 
                     //no need to consider resetting variables here as I set it to reset whenever user clicks the store rssi button
                 }
