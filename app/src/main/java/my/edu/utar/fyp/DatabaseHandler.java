@@ -118,7 +118,8 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     //deletes row with specific >=1 reference point ids
-    public void deleteRows(String[] rowIDs) {
+    public void deleteRows(String rowID) {
+        String[] rowIDs = new String[] {rowID};
         String whereClause = "rowid=?";
         SQLiteDatabase db = getWritableDatabase();
         db.delete(table_name, whereClause, rowIDs);

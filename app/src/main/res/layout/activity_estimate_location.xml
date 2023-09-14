@@ -36,6 +36,11 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:id="@+id/tvShowEuclideanDistance"
+        android:text="Show Euclidean Distance Calculated" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:id="@+id/tvShowEstimatedLocation"
         android:text="Show estimated location" />
 

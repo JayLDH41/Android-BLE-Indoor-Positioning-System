@@ -35,7 +35,7 @@ import org.apache.commons.math3.ml.distance.EuclideanDistance;
 public class EstimateLocation extends AppCompatActivity {
 
     Button btnStartEst, btnStopEst, btnGetCurRSSI;
-    TextView tvEstLocation, tvKNearestRefPt, tvCurRssi;
+    TextView tvEstLocation, tvKNearestRefPt, tvCurRssi, tvEUDistance;
 
     BluetoothAdapter btAdapter;
     BluetoothLeScanner btScanner;
@@ -56,6 +56,7 @@ public class EstimateLocation extends AppCompatActivity {
         tvEstLocation = findViewById(R.id.tvShowEstimatedLocation);
         tvKNearestRefPt = findViewById(R.id.tvShowKNearestRefPoint);
         tvCurRssi = findViewById(R.id.tvShowCurrentRssi);
+        tvEUDistance = findViewById(R.id.tvShowEuclideanDistance);
 
         //asking for permissions
         checkPermissions(this, this);
@@ -289,6 +290,8 @@ public class EstimateLocation extends AppCompatActivity {
         Log.d("Before sorting", on_off_distances.toString());
         Log.d("After sorting", sortedDistances.toString());
 
+        tvEUDistance.setText("\nEuclidean Distance: \n" + "Point 1: " + sortedDistances.get(0) + "\nPoint 2: " + sortedDistances.get(1) + "\nPoint 3: " + sortedDistances.get(2));
+
         // ================================================== Kth Nearest Points ==================================================
 
         //get the indices of the first 3 elements
@@ -297,11 +300,11 @@ public class EstimateLocation extends AppCompatActivity {
         for(int i=0; i<k; i++)
             for(Map.Entry<Integer, Double> entry : hmLabel.entrySet())
                 if(entry.getValue() == sortedDistances.get(i))
-                    indexList.add(entry.getKey());
+                    indexList.add(entry.getKey() + 1);
 
         //displays the K nearest points from current location
         Log.d("K nearest neighbours", indexList.toString());
-        tvKNearestRefPt.setText("3 nearest neighbour point: " + indexList.toString());
+        tvKNearestRefPt.setText("\n3 nearest neighbour point: " + indexList.toString());
 
         // ================================================== Location Estimation ==================================================
 
@@ -310,15 +313,15 @@ public class EstimateLocation extends AppCompatActivity {
         float[] coor1, coor2, coor3;
         DatabaseHandler db = new DatabaseHandler(EstimateLocation.this);
         int rownum;
-        rownum = indexList.get(0) + 1 ;
+        rownum = indexList.get(0);
         String row1 = Integer.toString(rownum);
         coor1 = db.getCoordinates(new String[] {row1});
 
-        rownum = indexList.get(1) + 1;
+        rownum = indexList.get(1);
         String row2 = Integer.toString(rownum);
         coor2 = db.getCoordinates(new String[] {row2});
 
-        rownum = indexList.get(2) + 1;
+        rownum = indexList.get(2);
         String row3 = Integer.toString(rownum);
         coor3 = db.getCoordinates(new String[] {row3});
 
@@ -328,13 +331,13 @@ public class EstimateLocation extends AppCompatActivity {
 
         //estimate current coordinates of user using WKNN method
         double estX, estY, totalWeight;
-        totalWeight = sortedDistances.get(0) + sortedDistances.get(1) + sortedDistances.get(2);
+        totalWeight = (1/sortedDistances.get(0)) + (1/sortedDistances.get(1)) + (1/sortedDistances.get(2));
         estX = (coor1[0] * (1/sortedDistances.get(0)) + coor2[0] * (1/sortedDistances.get(1)) + coor3[0] * (1/sortedDistances.get(2))) / totalWeight;
         estY = (coor1[1] * (1/sortedDistances.get(0)) + coor2[1] * (1/sortedDistances.get(1)) + coor3[1] * (1/sortedDistances.get(2))) / totalWeight;
 
         //displays estimated coordinates
         Log.d("Estimated Location", estX + ", " + estY);
-        tvEstLocation.setText("Estimated Location: (" + estX + ", " + estY + ")");
+        tvEstLocation.setText("\nEstimated Location: (" + estX + ", " + estY + ")");
 
         stopScan();
     }

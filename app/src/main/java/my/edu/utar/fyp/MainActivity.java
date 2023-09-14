@@ -535,10 +535,10 @@ public class MainActivity extends AppCompatActivity {
                 // ================================================== Calculate Avg MFKF RSSI & Store it ==================================================
 
                 //if reach 60 seconds / entries => calculate the average RSSI and store it into database
-                if (count == 60) {
-                    avgrssi1 = totalrssi1 / 60;
-                    avgrssi2 = totalrssi2 / 60;
-                    avgrssi3 = totalrssi3 / 60;
+                if (count == 30) {
+                    avgrssi1 = totalrssi1 / 30;
+                    avgrssi2 = totalrssi2 / 30;
+                    avgrssi3 = totalrssi3 / 30 ;
 
                     //Log.d("Total RSSI values for Point " + rowCounter, totalrssi1 + " " + totalrssi2 + " " + totalrssi3);
                     //Log.d("Avg RSSI values for Point " + rowCounter, avgrssi1 + " " + avgrssi2 + " " + avgrssi3);

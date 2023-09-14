@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,7 +34,41 @@ public class DatabasePage extends AppCompatActivity {
         lv.setAdapter(adapter);
 
         Button btnClearDatabase = findViewById(R.id.btnClearDatabase);
+        Button btnDeleteRow = findViewById(R.id.btnDeleteRow);
         DatabaseHandler dbHandler = new DatabaseHandler(this);
+
+        btnDeleteRow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(DatabasePage.this);
+                final EditText et = new EditText(DatabasePage.this);
+                builder.setView(et);
+                builder.setMessage("Enter the point you want to delete");
+                builder.setTitle("Delete Row");
+                builder.setCancelable(false);
+
+                builder.setPositiveButton("Submit", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        String s = et.getText().toString();
+                        dbHandler.deleteRows(s);
+                        Toast toast = Toast.makeText(DatabasePage.this, "Point deleted", Toast.LENGTH_SHORT);
+                        toast.show();
+                        finish();
+                    }
+                });
+
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.cancel();
+                    }
+                });
+
+                builder.show();
+
+            }
+        });
 
         btnClearDatabase.setOnClickListener(new View.OnClickListener() {
             @Override
